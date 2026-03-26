@@ -1,0 +1,16 @@
+{
+  "name": "bookshelf",
+  "version": "1.0.0",
+  "description": "A simple CLI to track your reading history",
+  "type": "module",
+  "bin": {
+    "bookshelf": "./bin/bookshelf.js"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=18.3.0"
+  },
+  "license": "MIT"
+}

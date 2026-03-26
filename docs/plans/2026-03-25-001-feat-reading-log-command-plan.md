@@ -1,7 +1,7 @@
 ---
 title: "feat: Add bookshelf log command for tracking reading history"
 type: feat
-status: active
+status: completed
 date: 2026-03-25
 origin: docs/brainstorms/2026-03-25-reading-log-requirements.md
 ---
@@ -108,7 +108,7 @@ None — this is a new repository with no `docs/solutions/` directory.
 
 ## Implementation Units
 
-- [ ] **Unit 1: Project scaffolding and CLI entry point**
+- [x] **Unit 1: Project scaffolding and CLI entry point**
 
   **Goal:** Establish the project structure, package.json, and a working `bookshelf` command that responds to `--help` or unknown input with a usage message.
 
@@ -134,7 +134,7 @@ None — this is a new repository with no `docs/solutions/` directory.
   - `node bin/bookshelf.js log` prints usage or help text
   - `node bin/bookshelf.js` with no args prints top-level usage
 
-- [ ] **Unit 2: Storage layer (read/write JSON)**
+- [x] **Unit 2: Storage layer (read/write JSON)**
 
   **Goal:** Implement the data persistence layer that reads and writes `~/.bookshelf/reading-log.json`, auto-creating the directory and file on first use.
 
@@ -164,7 +164,7 @@ None — this is a new repository with no `docs/solutions/` directory.
   - Tests pass with `node --test test/storage.test.js`
   - Storage works with a temp directory (tests should not touch real `~/.bookshelf/`)
 
-- [ ] **Unit 3: `start` and `finish` command logic**
+- [x] **Unit 3: `start` and `finish` command logic**
 
   **Goal:** Implement the `start` and `finish` subcommands with all validation, edge cases, and flag handling.
 
@@ -200,7 +200,7 @@ None — this is a new repository with no `docs/solutions/` directory.
   - All test scenarios pass
   - Manual smoke test: start a book, finish it with rating, verify JSON file contents
 
-- [ ] **Unit 4: `list` command and output formatting**
+- [x] **Unit 4: `list` command and output formatting**
 
   **Goal:** Implement the `list` subcommand that displays all reading log entries in a readable table format.
 
