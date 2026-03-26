@@ -24,6 +24,8 @@ function parseDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const d = new Date(value + 'T00:00:00');
   if (isNaN(d.getTime())) return null;
+  const [y, m, day] = value.split('-').map(Number);
+  if (d.getFullYear() !== y || d.getMonth() + 1 !== m || d.getDate() !== day) return null;
   return value;
 }
 
@@ -39,6 +41,18 @@ function findEntry(entries, title, status) {
   );
 }
 
+function extractDate(args) {
+  const dateIdx = args.indexOf('--date');
+  if (dateIdx === -1) return todayString();
+  const dateValue = args[dateIdx + 1];
+  const parsed = parseDate(dateValue);
+  if (!parsed) {
+    console.error(`Error: Invalid date "${dateValue}". Use YYYY-MM-DD format.`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
 function handleStart(args, entries) {
   const title = args[0];
   if (!title) {
@@ -47,17 +61,7 @@ function handleStart(args, entries) {
     process.exit(1);
   }
 
-  let date = todayString();
-  const dateIdx = args.indexOf('--date');
-  if (dateIdx !== -1) {
-    const dateValue = args[dateIdx + 1];
-    const parsed = parseDate(dateValue);
-    if (!parsed) {
-      console.error(`Error: Invalid date "${dateValue}". Use YYYY-MM-DD format.`);
-      process.exit(1);
-    }
-    date = parsed;
-  }
+  const date = extractDate(args);
 
   const readingIdx = findEntry(entries, title, 'reading');
   if (readingIdx !== -1) {
@@ -85,17 +89,7 @@ function handleFinish(args, entries) {
     process.exit(1);
   }
 
-  let date = todayString();
-  const dateIdx = args.indexOf('--date');
-  if (dateIdx !== -1) {
-    const dateValue = args[dateIdx + 1];
-    const parsed = parseDate(dateValue);
-    if (!parsed) {
-      console.error(`Error: Invalid date "${dateValue}". Use YYYY-MM-DD format.`);
-      process.exit(1);
-    }
-    date = parsed;
-  }
+  const date = extractDate(args);
 
   let rating = null;
   const ratingIdx = args.indexOf('--rating');

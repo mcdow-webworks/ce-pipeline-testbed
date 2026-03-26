@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setLogPath, getLogPath, loadLog, saveLog } from '../src/storage.js';
@@ -45,6 +45,46 @@ describe('storage', () => {
     const result = loadLog();
     assert.equal(result.length, 1);
     assert.equal(result[0].title, 'New');
+  });
+
+  it('loadLog exits with error on corrupted JSON', () => {
+    writeFileSync(tempFile, 'not valid json', 'utf-8');
+    const origExit = process.exit;
+    const origErr = console.error;
+    let exitCode = null;
+    const errors = [];
+    process.exit = (code) => { exitCode = code; throw new Error('__EXIT__'); };
+    console.error = (...a) => errors.push(a.join(' '));
+    try {
+      loadLog();
+    } catch (e) {
+      if (e.message !== '__EXIT__') throw e;
+    } finally {
+      process.exit = origExit;
+      console.error = origErr;
+    }
+    assert.equal(exitCode, 1);
+    assert.ok(errors[0].includes('corrupted'));
+  });
+
+  it('loadLog exits with error on non-array JSON', () => {
+    writeFileSync(tempFile, '{"not": "an array"}', 'utf-8');
+    const origExit = process.exit;
+    const origErr = console.error;
+    let exitCode = null;
+    const errors = [];
+    process.exit = (code) => { exitCode = code; throw new Error('__EXIT__'); };
+    console.error = (...a) => errors.push(a.join(' '));
+    try {
+      loadLog();
+    } catch (e) {
+      if (e.message !== '__EXIT__') throw e;
+    } finally {
+      process.exit = origExit;
+      console.error = origErr;
+    }
+    assert.equal(exitCode, 1);
+    assert.ok(errors[0].includes('unexpected format'));
   });
 
   it('round-trip: save then load returns identical data', () => {

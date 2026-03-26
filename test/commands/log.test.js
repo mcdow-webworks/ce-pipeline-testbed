@@ -188,6 +188,20 @@ describe('log finish', () => {
     assert.equal(entries[0].rating, 5);
   });
 
+  it('rejects invalid --date format on finish', () => {
+    runCommand(['start', 'DDIA']);
+    const out = runCommand(['finish', 'DDIA', '--date', 'not-a-date']);
+    assert.equal(out.exitCode, 1);
+    assert.ok(out.stderr[0].includes('Invalid date'));
+  });
+
+  it('rejects invalid calendar date like 2026-02-30', () => {
+    runCommand(['start', 'DDIA']);
+    const out = runCommand(['finish', 'DDIA', '--date', '2026-02-30']);
+    assert.equal(out.exitCode, 1);
+    assert.ok(out.stderr[0].includes('Invalid date'));
+  });
+
   it('errors when title is missing', () => {
     const out = runCommand(['finish']);
     assert.equal(out.exitCode, 1);
@@ -242,6 +256,7 @@ describe('log list', () => {
 describe('log usage', () => {
   it('prints usage when no subcommand given', () => {
     const out = runCommand([]);
+    assert.equal(out.exitCode, 0);
     assert.ok(out.stdout[0].includes('Usage'));
   });
 

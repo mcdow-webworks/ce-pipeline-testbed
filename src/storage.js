@@ -17,7 +17,20 @@ export function loadLog() {
   const filePath = getLogPath();
   if (!existsSync(filePath)) return [];
   const data = readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+  let parsed;
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    console.error(`Error: Reading log file is corrupted: ${filePath}`);
+    console.error('Fix the file manually or delete it to start fresh.');
+    process.exit(1);
+  }
+  if (!Array.isArray(parsed)) {
+    console.error(`Error: Reading log file has unexpected format: ${filePath}`);
+    console.error('Expected a JSON array. Fix the file manually or delete it to start fresh.');
+    process.exit(1);
+  }
+  return parsed;
 }
 
 export function saveLog(entries) {
