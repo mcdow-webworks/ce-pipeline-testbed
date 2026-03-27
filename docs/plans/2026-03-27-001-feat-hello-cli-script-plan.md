@@ -1,7 +1,7 @@
 ---
 title: "feat: Add hello.sh CLI greeting script"
 type: feat
-status: active
+status: completed
 date: 2026-03-27
 origin: docs/brainstorms/2026-03-27-hello-cli-requirements.md
 ---
@@ -39,7 +39,7 @@ The project needs a foundational CLI utility that greets the user by name with t
 
 ## Implementation Units
 
-- [ ] **Unit 1: Create hello.sh script**
+- [x] **Unit 1: Create hello.sh script**
 
   **Goal:** Deliver the complete `hello.sh` script satisfying all requirements.
 
