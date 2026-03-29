@@ -1,7 +1,7 @@
 ---
 title: "feat: Add weather CLI mock forecast script"
 type: feat
-status: active
+status: completed
 date: 2026-03-29
 origin: docs/brainstorms/2026-03-29-weather-cli-requirements.md
 ---
@@ -66,7 +66,7 @@ The project needs a simple CLI weather utility. All forecast data is hardcoded â
 
 ## Implementation Units
 
-- [ ] **Unit 1: Create weather.sh with core forecast output**
+- [x] **Unit 1: Create weather.sh with core forecast output**
 
   **Goal:** Create the script with argument parsing, help output, default city handling, and Fahrenheit forecast display.
 
@@ -100,7 +100,7 @@ The project needs a simple CLI weather utility. All forecast data is hardcoded â
   - Output matches the format specified in R2
   - Day abbreviations match actual current weekday names
 
-- [ ] **Unit 2: Add Celsius conversion support**
+- [x] **Unit 2: Add Celsius conversion support**
 
   **Goal:** Implement `--units celsius` flag to convert hardcoded Fahrenheit temperatures to Celsius.
 
@@ -131,7 +131,7 @@ The project needs a simple CLI weather utility. All forecast data is hardcoded â
   - Output format uses `Â°C` suffix
   - Flag works regardless of position relative to city argument
 
-- [ ] **Unit 3: Set executable permission and verify end-to-end**
+- [x] **Unit 3: Set executable permission and verify end-to-end**
 
   **Goal:** Ensure the script has executable permission in git and passes all acceptance criteria.
 
