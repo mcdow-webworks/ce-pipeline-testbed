@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --units)
+      if [[ -z "$2" || "$2" == --* ]]; then
+        echo "Error: --units requires a value (e.g., --units celsius)" >&2
+        exit 1
+      fi
       units="$2"
       shift 2
       ;;
