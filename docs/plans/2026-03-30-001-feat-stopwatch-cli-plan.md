@@ -1,7 +1,7 @@
 ---
 title: "feat: Add stopwatch CLI with lap tracking"
 type: feat
-status: active
+status: completed
 date: 2026-03-30
 origin: docs/brainstorms/2026-03-30-stopwatch-cli-requirements.md
 ---
@@ -77,7 +77,7 @@ The repo has `countdown.sh` for counting down from a duration. Users also need t
 
 ## Implementation Units
 
-- [ ] **Unit 1: Core stopwatch with help and display**
+- [x] **Unit 1: Core stopwatch with help and display**
 
   **Goal:** Create `stopwatch.sh` with arg parsing, `--help` output, and the main counting loop that displays elapsed time in-place with millisecond precision.
 
@@ -113,7 +113,7 @@ The repo has `countdown.sh` for counting down from a duration. Users also need t
   - Running the script shows `Elapsed: 0m 0s 000ms` updating with millisecond precision
   - Ctrl+C produces a clean exit
 
-- [ ] **Unit 2: Lap recording and summary**
+- [x] **Unit 2: Lap recording and summary**
 
   **Goal:** Add SIGUSR1-based lap recording when `--lap` is passed, and print a formatted lap summary on SIGINT exit.
 
