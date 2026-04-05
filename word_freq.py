@@ -6,22 +6,26 @@ import sys
 from collections import Counter
 
 
-def count_words(text):
-    """Return a dict of word -> count (case-insensitive, punctuation stripped)."""
+def count_words(text: str) -> Counter:
+    """Return a Counter of word -> count (case-insensitive, punctuation stripped)."""
     words = re.findall(r"[a-zA-Z0-9]+(?:'[a-zA-Z]+)?", text.lower())
-    return dict(Counter(words))
+    return Counter(words)
 
 
-def top_n(counts, n=10):
+def top_n(counts: Counter, n: int = 10) -> list[tuple[str, int]]:
     """Return the top N words by frequency as a list of (word, count) tuples."""
-    return Counter(counts).most_common(n)
+    return counts.most_common(n)
 
 
-def main():
+def main() -> None:
     """Read from stdin or a filename argument and print the top 10 words."""
     if len(sys.argv) > 1:
-        with open(sys.argv[1], encoding="utf-8") as f:
-            text = f.read()
+        try:
+            with open(sys.argv[1], encoding="utf-8") as f:
+                text = f.read()
+        except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
         text = sys.stdin.read()
 
