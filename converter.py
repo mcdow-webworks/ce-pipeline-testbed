@@ -1,22 +1,22 @@
 """Temperature converter utility for Fahrenheit, Celsius, and Kelvin."""
 
 
-def f_to_c(temp):
+def f_to_c(temp: float) -> float:
     """Convert Fahrenheit to Celsius."""
     return (temp - 32) * 5 / 9
 
 
-def c_to_f(temp):
+def c_to_f(temp: float) -> float:
     """Convert Celsius to Fahrenheit."""
     return temp * 9 / 5 + 32
 
 
-def c_to_k(temp):
+def c_to_k(temp: float) -> float:
     """Convert Celsius to Kelvin."""
     return temp + 273.15
 
 
-def k_to_c(temp):
+def k_to_c(temp: float) -> float:
     """Convert Kelvin to Celsius."""
     return temp - 273.15
 
