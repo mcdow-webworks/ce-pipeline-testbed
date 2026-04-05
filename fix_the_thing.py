@@ -5,12 +5,12 @@ import os
 import sys
 
 
-def check_missing_readme():
+def check_missing_readme() -> bool:
     """Returns True if README.md is missing."""
     return not os.path.isfile("README.md")
 
 
-def check_empty_files():
+def check_empty_files() -> list[str]:
     """Returns list of empty files in the current directory."""
     empty = []
     for entry in os.listdir("."):
@@ -19,7 +19,7 @@ def check_empty_files():
     return sorted(empty)
 
 
-def check_trailing_whitespace(filepath):
+def check_trailing_whitespace(filepath: str) -> list[int]:
     """Returns line numbers with trailing whitespace."""
     line_numbers = []
     with open(filepath, "r") as f:
@@ -30,8 +30,8 @@ def check_trailing_whitespace(filepath):
     return line_numbers
 
 
-def main():
-    """Runs all checks and prints a summary report."""
+def main() -> int:
+    """Runs all checks and prints a summary report. Returns exit code."""
     issues_found = False
 
     # Check for missing README
@@ -61,19 +61,24 @@ def main():
             if lines:
                 print(f"ISSUE: Trailing whitespace in {entry} on line(s): {', '.join(str(n) for n in lines)}")
                 trailing_ws_found = True
-        except (UnicodeDecodeError, PermissionError):
-            pass
+        except UnicodeDecodeError:
+            pass  # binary file, nothing to check
+        except PermissionError:
+            print(f"WARNING: Could not read {entry}, skipping")
+
+    if trailing_ws_found:
+        issues_found = True
 
     if not trailing_ws_found:
         print("OK: No trailing whitespace found")
 
-    if issues_found or trailing_ws_found:
+    if issues_found:
         print("\nSummary: Issues detected.")
-        sys.exit(1)
+        return 1
     else:
         print("\nSummary: No issues found.")
-        sys.exit(0)
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
