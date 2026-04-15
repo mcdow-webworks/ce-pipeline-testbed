@@ -1,3 +1,4 @@
+<!-- Stress test mention: this comment verifies @mention handling during concurrent pipelines -->
 # Changelog
 
 All notable changes to this project will be documented in this file.
