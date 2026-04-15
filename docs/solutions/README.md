@@ -1,0 +1,29 @@
+# Solutions Index
+
+Catalog of captured solutions from past engineering work. Each entry links to a detailed doc with problem, root cause, fix, and prevention strategies.
+
+Use this index before implementing a feature or fixing a bug — search for keywords to find relevant prior solutions.
+
+---
+
+## Best Practices
+
+| Doc | Tags | Date |
+|-----|------|------|
+| [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
+
+## Documentation Gaps
+
+| Doc | Tags | Date |
+|-----|------|------|
+| [Add CHANGELOG.md following Keep a Changelog format](documentation-gaps/add-changelog-keep-a-changelog-format-2026-04-15.md) | changelog, keep-a-changelog, documentation | 2026-04-15 |
+
+## Workflow Issues
+
+| Doc | Tags | Date |
+|-----|------|------|
+| [Handling @mention directives in PR review comments during concurrent pipelines](workflow-issues/concurrent-pipeline-mention-handling-verification-2026-04-15.md) | concurrent-pipelines, mention-handling, engineer-auto | 2026-04-15 |
+
+---
+
+*3 solutions across 3 categories. Last refreshed: 2026-04-15.*
