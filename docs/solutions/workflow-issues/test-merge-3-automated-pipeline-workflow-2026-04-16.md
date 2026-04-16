@@ -1,6 +1,7 @@
 ---
 title: Creating test artifacts to validate the automated merge phase
 date: 2026-04-16
+last_updated: 2026-04-16
 category: docs/solutions/workflow-issues
 module: engineer-auto pipeline
 problem_type: workflow_issue
@@ -59,6 +60,7 @@ The merge phase requires a concrete artifact on a feature branch to exercise the
 - When extending or validating pipeline phases, include a corresponding test artifact as part of acceptance criteria.
 - Adopt a naming convention (e.g., `TEST-MERGE-N.md` with an incrementing suffix) so test artifacts are easily identifiable and traceable to specific pipeline validation runs.
 - Periodically prune stale test artifacts via a cleanup task to avoid repository clutter.
+- The `ce:compound` documentation phase is idempotent: when re-invoked for the same problem, it detects high overlap with the existing doc and updates it in-place rather than creating a duplicate. Rely on this property when automated pipelines may re-trigger compound more than once per issue.
 
 ## Related Issues
 
