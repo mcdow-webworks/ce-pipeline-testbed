@@ -1,7 +1,7 @@
 ---
 title: CE Pipeline Merge Phase Validation with Simple File Addition
 date: 2026-04-15
-category: docs/solutions/workflow-issues
+category: workflow-issues
 module: ce-pipeline
 problem_type: workflow_issue
 component: development_workflow
