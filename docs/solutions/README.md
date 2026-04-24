@@ -18,6 +18,12 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 |-----|------|------|
 | [Add CHANGELOG.md following Keep a Changelog format](documentation-gaps/add-changelog-keep-a-changelog-format-2026-04-15.md) | changelog, keep-a-changelog, documentation | 2026-04-15 |
 
+## Logic Errors
+
+| Doc | Tags | Date |
+|-----|------|------|
+| [table_fmt silently discards markdown column-alignment hints](logic-errors/table-fmt-respect-column-alignment-2026-04-24.md) | markdown, table, alignment, cli, formatting | 2026-04-24 |
+
 ## Workflow Issues
 
 | Doc | Tags | Date |
@@ -26,4 +32,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*3 solutions across 3 categories. Last refreshed: 2026-04-15.*
+*4 solutions across 4 categories. Last refreshed: 2026-04-24.*
