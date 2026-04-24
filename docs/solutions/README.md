@@ -17,6 +17,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [Add CHANGELOG.md following Keep a Changelog format](documentation-gaps/add-changelog-keep-a-changelog-format-2026-04-15.md) | changelog, keep-a-changelog, documentation | 2026-04-15 |
+| [Missing MIT License file at repo root](documentation-gaps/missing-mit-license-file-2026-04-15.md) | license, mit, open-source, compliance | 2026-04-15 |
 
 ## Logic Errors
 
@@ -32,4 +33,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*4 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
