@@ -1,8 +1,8 @@
 ---
 title: Missing MIT License File at Repo Root
 date: 2026-04-15
-category: docs/solutions/documentation-gaps
-module: MIT License Addition
+category: documentation-gaps
+module: documentation
 problem_type: documentation_gap
 component: documentation
 symptoms:
