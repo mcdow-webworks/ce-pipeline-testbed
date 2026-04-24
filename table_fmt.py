@@ -5,7 +5,12 @@ import sys
 
 
 def _parse_alignment(cell):
-    """Return 'left', 'right', 'center', or None from a separator cell."""
+    """Return 'left', 'right', 'center', or None from a separator cell.
+
+    Returns ``None`` (not ``'left'``) when the cell has no colons, so
+    ``format_table`` can emit a plain ``---`` separator and preserve the
+    input's bare-dash style across a round trip.
+    """
     if not cell:
         return None
     starts = cell.startswith(":")
@@ -62,7 +67,10 @@ def format_table(rows, alignments=None):
 
     ``alignments`` is an optional list of ``'left'``, ``'right'``, ``'center'``,
     or ``None`` per column. ``None`` (and any missing entries) defaults to
-    left-padding with a plain dash separator, matching prior behavior.
+    left-padding with a plain dash separator, matching prior behavior. An
+    ``alignments`` list shorter than the number of columns is allowed; missing
+    trailing entries fall back to the ``None`` default. Extra entries beyond
+    the column count are ignored.
     """
     if not rows:
         return ""
