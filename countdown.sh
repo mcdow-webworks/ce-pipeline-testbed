@@ -55,8 +55,8 @@ format_remaining() {
 # The initial tick is the widest the formatted value will ever be in
 # this run, so pad every later render to that width to overwrite the
 # residue of the previous (longer) render under \r.
-INITIAL_FORMATTED=$(format_remaining "$DURATION")
-WIDTH=${#INITIAL_FORMATTED}
+WIDTH=$(format_remaining "$DURATION")
+WIDTH=${#WIDTH}
 
 # Countdown loop
 for (( i = DURATION; i > 0; i-- )); do
