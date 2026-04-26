@@ -1,7 +1,7 @@
 ---
 title: "feat: Add --max-width flag to table_fmt"
 type: feat
-status: active
+status: completed
 date: 2026-04-26
 origin: docs/brainstorms/2026-04-26-table-fmt-max-width-requirements.md
 ---
@@ -201,7 +201,7 @@ existing function); the rest of `format_table` is unchanged.
 
 ## Implementation Units
 
-- [ ] **Unit 1: Migrate `main()` to argparse and add validated `--max-width`**
+- [x] **Unit 1: Migrate `main()` to argparse and add validated `--max-width`**
 
 **Goal:** Introduce `argparse` in `main()` and declare `--max-width N` with a
 validator that rejects non-integer / `< 4` values before stdin is read. No
@@ -262,7 +262,7 @@ no-flag invocations remain byte-for-byte identical.
 
 ---
 
-- [ ] **Unit 2: Truncate columns inside `format_table()` and wire the flag through**
+- [x] **Unit 2: Truncate columns inside `format_table()` and wire the flag through**
 
 **Goal:** Add `max_width=None` to `format_table()`. When set, run the
 column-by-column truncation pre-pass described in High-Level Technical
