@@ -136,4 +136,5 @@ def test_mixed_alignments_round_trip(self):
 ## Related Issues
 
 - GitHub issue #92 — Respect markdown column-alignment syntax in the separator row
+- GitHub issue #109 — Add a `--json` output mode (extends the `(rows, alignments)` formatter signature established here; see [`docs/solutions/best-practices/table-fmt-add-cli-output-mode-flag-2026-04-26.md`](../best-practices/table-fmt-add-cli-output-mode-flag-2026-04-26.md))
 - Commits: `7443f54` (feat), `5605c07` (work-phase doc), `db88e9c` (ce-review autofix)
