@@ -11,6 +11,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
+| [Banded time display for live countdown CLIs (H:MM:SS / M:SS / bare seconds)](best-practices/countdown-banded-time-display-2026-04-25.md) | countdown, bash, cli, time-format, carriage-return | 2026-04-25 |
 
 ## Documentation Gaps
 
@@ -33,4 +34,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-25.*
