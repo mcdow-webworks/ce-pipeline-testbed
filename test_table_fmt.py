@@ -152,6 +152,11 @@ class SplitCellsTests(unittest.TestCase):
         # Trailing `\` with no following char must not read out of range.
         self.assertEqual(_split_cells("| foo \\"), ["", " foo \\"])
 
+    def test_multiple_escaped_pipes_in_one_cell(self):
+        # Inductive case: N escaped pipes in a single cell all unescape to
+        # literal `|` without splitting.
+        self.assertEqual(_split_cells(r"| a \| b \| c |"), ["", " a | b | c ", ""])
+
 
 class EscapedPipeTests(unittest.TestCase):
     def test_parse_treats_escaped_pipe_as_literal(self):
@@ -195,6 +200,21 @@ class EscapedPipeTests(unittest.TestCase):
         twice = format_table(rows2, alignments2)
         self.assertEqual(once, twice)
         self.assertEqual(rows2, [["Name", "Pipe"], ["A", "a | b"]])
+
+    def test_pipe_only_cell_round_trips(self):
+        # Most-reduced form of the regression: a cell whose entire logical
+        # content is a single `|` must encode, decode, and survive intact.
+        rows, _ = parse_table(format_table([["H"], ["|"]]))
+        self.assertEqual(rows, [["H"], ["|"]])
+
+    def test_format_with_right_alignment_and_escaped_pipe(self):
+        # Right-alignment must pad based on the encoded width (with `\|`),
+        # not the logical width, so visual columns line up.
+        out = format_table([["H"], ["a | b"]], alignments=["right"])
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "|      H |")
+        self.assertEqual(lines[1], "| -----: |")
+        self.assertEqual(lines[2], r"| a \| b |")
 
 
 if __name__ == "__main__":
