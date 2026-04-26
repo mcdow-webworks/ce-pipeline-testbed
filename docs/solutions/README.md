@@ -11,6 +11,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
+| [Strip-padding CLI flag for table_fmt without breaking the separator row](best-practices/table-fmt-strip-padding-cli-flag-2026-04-25.md) | markdown, table, cli, argparse, formatting, downstream-tooling | 2026-04-25 |
 
 ## Documentation Gaps
 
@@ -33,4 +34,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-25.*
