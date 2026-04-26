@@ -122,6 +122,51 @@ class StripPaddingTests(unittest.TestCase):
         out = format_table(rows, strip_padding=True)
         self.assertEqual(out.splitlines()[2], "|hello world|")
 
+    def test_default_matches_explicit_false_across_alignment_modes(self):
+        rows = [["Name", "Age", "City"], ["Alice", "30", "NYC"]]
+        for alignments in (
+            None,
+            [],
+            [None, None, None],
+            ["left", "right", "center"],
+            ["right", None, "left"],
+        ):
+            with self.subTest(alignments=alignments):
+                self.assertEqual(
+                    format_table(rows, alignments),
+                    format_table(rows, alignments, strip_padding=False),
+                )
+
+    def test_empty_rows_returns_empty_string_under_strip_padding(self):
+        self.assertEqual(format_table([], strip_padding=True), "")
+
+    def test_header_only_table_under_strip_padding(self):
+        out = format_table([["H1", "H2"]], strip_padding=True)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "|H1|H2|")
+        self.assertEqual(lines[1], "| --- | --- |")
+        self.assertEqual(len(lines), 2)
+
+    def test_ragged_row_emits_empty_trailing_cells_under_strip_padding(self):
+        rows = [["A", "B"], ["x"]]
+        out = format_table(rows, strip_padding=True)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "|A|B|")
+        self.assertEqual(lines[2], "|x||")
+
+    def test_round_trip_through_parse_table_under_strip_padding(self):
+        rows = [["Name", "Age", "City"], ["Alice", "30", "NYC"]]
+        alignments = ["left", "right", "center"]
+        formatted = format_table(rows, alignments, strip_padding=True)
+        rows2, alignments2 = parse_table(formatted)
+        self.assertEqual(rows2, rows)
+        self.assertEqual(alignments2, alignments)
+        # Re-formatting in the same mode is a fixed point.
+        self.assertEqual(
+            format_table(rows2, alignments2, strip_padding=True),
+            formatted,
+        )
+
 
 class RoundTripTests(unittest.TestCase):
     def test_mixed_alignments_round_trip(self):

@@ -106,7 +106,7 @@ def format_table(rows, alignments=None, strip_padding=False):
 
     def format_row(cells):
         if strip_padding:
-            return "|" + "|".join(cells[i] for i in range(num_cols)) + "|"
+            return "|" + "|".join(cells[:num_cols]) + "|"
         padded = [pad_cell(cells[i], col_widths[i], align_for(i)) for i in range(num_cols)]
         return "| " + " | ".join(padded) + " |"
 
