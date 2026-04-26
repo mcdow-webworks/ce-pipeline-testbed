@@ -30,7 +30,8 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [Handling @mention directives in PR review comments during concurrent pipelines](workflow-issues/concurrent-pipeline-mention-handling-verification-2026-04-15.md) | concurrent-pipelines, mention-handling, engineer-auto | 2026-04-15 |
+| [Engineer-auto pipeline correctly defers a fix whose target function lives only on an unmerged sibling PR](workflow-issues/engineer-auto-cross-pr-dependency-handling-2026-04-26.md) | engineer-auto, cross-pr-dependency, plan-blocked, working-tree-verification | 2026-04-26 |
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-26.*
