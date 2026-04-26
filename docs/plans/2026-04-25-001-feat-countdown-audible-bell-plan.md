@@ -1,7 +1,7 @@
 ---
 title: "feat: Add audible bell to countdown completion"
 type: feat
-status: active
+status: completed
 date: 2026-04-25
 origin: docs/brainstorms/2026-04-25-countdown-bell-requirements.md
 ---
