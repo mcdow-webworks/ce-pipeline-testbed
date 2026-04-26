@@ -1,7 +1,7 @@
 ---
 title: "feat: Add --json output mode to table_fmt.py"
 type: feat
-status: active
+status: completed
 date: 2026-04-26
 origin: docs/brainstorms/2026-04-26-table-fmt-json-output-requirements.md
 ---
@@ -122,7 +122,7 @@ options:
 
 ## Implementation Units
 
-- [ ] **Unit 1: Add `format_json(rows, alignments)` helper**
+- [x] **Unit 1: Add `format_json(rows, alignments)` helper**
 
 **Goal:** Add a new module-level function that converts parsed table data to a JSON string matching R2/R3, with header-row and duplicate-header validation that raises a typed error rather than calling `sys.exit` directly.
 
@@ -164,7 +164,7 @@ options:
 
 ---
 
-- [ ] **Unit 2: Wire argparse and `--json` flag into `main()`**
+- [x] **Unit 2: Wire argparse and `--json` flag into `main()`**
 
 **Goal:** Replace the bare `sys.stdin.read()` entry point with an argparse-backed `main()` that reads the same stdin, dispatches to `format_table` (default) or `format_json` (with `--json`), and translates `format_json`'s `ValueError` into the existing `Error: ...` / exit-1 pattern.
 
@@ -210,7 +210,7 @@ options:
 
 ---
 
-- [ ] **Unit 3: Test coverage for JSON mode and CLI dispatch**
+- [x] **Unit 3: Test coverage for JSON mode and CLI dispatch**
 
 **Goal:** Lock in R6 coverage and protect R1 (default-mode parity) with explicit regression tests.
 

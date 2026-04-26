@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Markdown table formatter — reads sloppy tables from stdin, outputs aligned columns."""
 
+import argparse
+import json
 import sys
 
 
@@ -120,13 +122,76 @@ def format_table(rows, alignments=None):
     return "\n".join(lines) + "\n"
 
 
-def main():
-    """Read a markdown table from stdin, format it, and print to stdout."""
+def format_json(rows, alignments):
+    """Return a JSON string of row objects keyed by the header row.
+
+    The first row is the header; remaining rows are emitted as objects mapping
+    each header cell text to the corresponding cell text. All values are
+    strings — no type coercion. Output is pretty-printed with ``indent=2`` and
+    terminated with a single trailing newline; non-ASCII cell text is preserved
+    literally rather than escaped. Per-column ``alignments`` metadata has no
+    JSON representation and is intentionally dropped from the output, but the
+    list itself is consulted to detect whether the parser saw a separator row.
+
+    Preconditions: ``rows`` is non-empty (caller should have already errored on
+    no-table input). Raises ``ValueError`` when ``alignments`` is empty (no
+    separator row, so the header is unidentified) or when ``rows[0]`` contains
+    duplicate cell text (header keys would collide).
+    """
+    if not alignments:
+        raise ValueError(
+            "--json requires a header row (no separator row found in input)"
+        )
+
+    header = rows[0]
+    seen = set()
+    for name in header:
+        if name in seen:
+            raise ValueError(
+                f"--json requires unique header column names; duplicate header: '{name}'"
+            )
+        seen.add(name)
+
+    payload = [dict(zip(header, row)) for row in rows[1:]]
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+
+
+def main(argv=None):
+    """Read a markdown table from stdin, format it, and print to stdout.
+
+    Default mode emits a re-aligned markdown table (byte-for-byte identical to
+    the pre-flag implementation). With ``--json``, emits a JSON array of row
+    objects keyed by the header row instead.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Format markdown tables from stdin. Without --json, output a "
+            "re-aligned markdown table. With --json, output an array of row "
+            "objects keyed by header."
+        )
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit parsed table as JSON instead of markdown",
+    )
+    args = parser.parse_args(argv)
+
     text = sys.stdin.read()
     rows, alignments = parse_table(text)
     if not rows:
         print("Error: no valid markdown table found in input", file=sys.stderr)
         sys.exit(1)
+
+    if args.json:
+        try:
+            output = format_json(rows, alignments)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        sys.stdout.write(output)
+        return
+
     sys.stdout.write(format_table(rows, alignments))
 
 
