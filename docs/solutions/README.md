@@ -11,6 +11,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
+| [Adding a format-time CLI flag to table_fmt without regressing byte-for-byte output](best-practices/table-fmt-max-width-flag-implementation-2026-04-26.md) | cli, argparse, table, truncation, backwards-compat, idempotency | 2026-04-26 |
 
 ## Documentation Gaps
 
@@ -33,4 +34,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-26.*
