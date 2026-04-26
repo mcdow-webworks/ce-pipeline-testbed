@@ -1,7 +1,7 @@
 ---
 title: "feat: Add --tick-format flag to countdown.sh"
 type: feat
-status: active
+status: completed
 date: 2026-04-26
 origin: docs/brainstorms/2026-04-26-tick-format-flag-requirements.md
 ---
@@ -172,7 +172,7 @@ substring substituted in for the time value.
 
 ## Implementation Units
 
-- [ ] **Unit 1: Refactor `countdown.sh` for testability (no behavior change)**
+- [x] **Unit 1: Refactor `countdown.sh` for testability (no behavior change)**
 
   **Goal:** Extract the existing logic into a `main` function and add a main-guard so the script is source-able from tests without triggering the countdown loop. No user-visible behavior change.
 
@@ -201,7 +201,7 @@ substring substituted in for the time value.
   - `bash countdown.sh 1` and `bash countdown.sh --silent 1` produce byte-identical output to the pre-change behavior.
   - Sourcing the file is side-effect-free.
 
-- [ ] **Unit 2: Add `--tick-format` flag, formatter, and validation**
+- [x] **Unit 2: Add `--tick-format` flag, formatter, and validation**
 
   **Goal:** Implement the user-facing feature: a `format_tick` helper, the new flag with both `--tick-format <value>` and `--tick-format=<value>` forms, fail-fast validation, integration into the ticker output, and updated `--help`.
 
@@ -236,7 +236,7 @@ substring substituted in for the time value.
   - Running `bash countdown.sh --tick-format human 90` (or any sample) renders the documented human form.
   - Running `bash countdown.sh --tick-format foo 1` exits non-zero with a stderr error and no countdown.
 
-- [ ] **Unit 3: Add `test_countdown.py` covering all formats, errors, `--help`, and `--silent` interaction**
+- [x] **Unit 3: Add `test_countdown.py` covering all formats, errors, `--help`, and `--silent` interaction**
 
   **Goal:** Lock down the new behavior with the smallest reasonable test surface, mirroring the existing `test_table_fmt.py` shape so the repo's testing story stays consistent.
 
@@ -281,7 +281,7 @@ substring substituted in for the time value.
   - `python -m unittest test_countdown.py` exits 0 with all tests passing on a clean checkout.
   - Total wall time for the new test file is small (a handful of `DURATION=1` integration runs plus instant unit calls).
 
-- [ ] **Unit 4: Update `CHANGELOG.md` `[Unreleased]` → `Added`**
+- [x] **Unit 4: Update `CHANGELOG.md` `[Unreleased]` → `Added`**
 
   **Goal:** Record the new flag in the changelog under the existing Keep a Changelog structure.
 
