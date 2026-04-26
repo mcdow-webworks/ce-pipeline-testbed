@@ -5,6 +5,14 @@ import argparse
 import sys
 
 
+# Truncation marker and the smallest --max-width value that leaves room for
+# at least one content character before the marker. _MIN_MAX_WIDTH derives
+# from len(_ELLIPSIS) so the relationship is self-correcting if the marker
+# ever changes (e.g. to a single-char Unicode ellipsis).
+_ELLIPSIS = "..."
+_MIN_MAX_WIDTH = len(_ELLIPSIS) + 1
+
+
 def _parse_alignment(cell):
     """Return 'left', 'right', 'center', or None from a separator cell.
 
@@ -73,12 +81,13 @@ def format_table(rows, alignments=None, max_width=None):
     trailing entries fall back to the ``None`` default. Extra entries beyond
     the column count are ignored.
 
-    ``max_width`` is an optional positive integer (``>= 4``). When set, any
-    column whose widest cell exceeds it is truncated to exactly ``max_width``
-    characters: ``max_width - 3`` characters of the original content followed
-    by the literal three-character ASCII ellipsis ``...``. Columns whose
-    widest cell already fits are emitted unchanged. Header rows truncate the
-    same as data rows so the column-width contract holds end-to-end.
+    ``max_width`` is an optional positive integer (``>= _MIN_MAX_WIDTH``,
+    currently 4). When set, any column whose widest cell exceeds it is
+    truncated to exactly ``max_width`` characters: ``max_width - len(_ELLIPSIS)``
+    characters of the original content followed by the literal ASCII ellipsis
+    ``...``. Columns whose widest cell already fits are emitted unchanged.
+    Header rows truncate the same as data rows so the column-width contract
+    holds end-to-end.
     """
     if not rows:
         return ""
@@ -90,25 +99,26 @@ def format_table(rows, alignments=None, max_width=None):
     num_cols = max(len(row) for row in rows)
     normalised = [row + [""] * (num_cols - len(row)) for row in rows]
 
-    # Per-column truncation pre-pass (R1, R2, R6). The CLI validator guarantees
-    # max_width >= 4 so cell[: max_width - 3] always leaves at least one
-    # content character before the "..." marker. Columns whose widest cell
+    # Per-column truncation pre-pass. The CLI validator guarantees
+    # max_width >= _MIN_MAX_WIDTH so cell[:keep] always leaves at least one
+    # content character before the ellipsis. Columns whose widest cell
     # already fits inside max_width are skipped entirely so their bytes are
     # identical to the no-flag path.
     if max_width is not None:
+        keep = max_width - len(_ELLIPSIS)
         for col in range(num_cols):
-            widest = max(len(normalised[r][col]) for r in range(len(normalised)))
+            widest = max(len(row[col]) for row in normalised)
             if widest <= max_width:
                 continue
-            for r in range(len(normalised)):
-                cell = normalised[r][col]
+            for r, row in enumerate(normalised):
+                cell = row[col]
                 if len(cell) > max_width:
-                    normalised[r][col] = cell[: max_width - 3] + "..."
+                    normalised[r][col] = cell[:keep] + _ELLIPSIS
 
     # Compute column widths (minimum 3 for separator aesthetics)
     col_widths = []
     for col in range(num_cols):
-        width = max((len(normalised[r][col]) for r in range(len(normalised))), default=3)
+        width = max((len(row[col]) for row in normalised), default=3)
         col_widths.append(max(width, 3))
 
     def align_for(i):
@@ -143,25 +153,24 @@ def format_table(rows, alignments=None, max_width=None):
     return "\n".join(lines) + "\n"
 
 
-def _positive_int_at_least_4(value):
+def _validate_max_width(value):
     """Argparse ``type=`` validator for ``--max-width``.
 
-    Accepts only string forms of positive integers >= 4 and returns the int.
-    Raises ``argparse.ArgumentTypeError`` for non-integers, zero, negatives,
-    or 1-3 — argparse turns that into a stderr message + exit code 2 before
-    stdin is read. Minimum of 4 is the smallest value where the contract
-    "exactly N chars ending in '...'" leaves room for at least one content
-    character (see brainstorm §D2).
+    Accepts only string forms of positive integers ``>= _MIN_MAX_WIDTH`` and
+    returns the int. Raises ``argparse.ArgumentTypeError`` otherwise —
+    argparse turns that into a stderr message + exit code 2 before stdin is
+    read. The minimum is the smallest value where the contract "exactly N
+    chars ending in '...'" leaves room for at least one content character.
     """
     try:
         n = int(value)
-    except (TypeError, ValueError):
+    except ValueError:
         raise argparse.ArgumentTypeError(
             f"--max-width must be an integer; got {value!r}"
         )
-    if n < 4:
+    if n < _MIN_MAX_WIDTH:
         raise argparse.ArgumentTypeError(
-            f"--max-width must be a positive integer >= 4; got {n}"
+            f"--max-width must be a positive integer >= {_MIN_MAX_WIDTH}; got {n}"
         )
     return n
 
@@ -176,16 +185,16 @@ def main():
     )
     parser.add_argument(
         "--max-width",
-        type=_positive_int_at_least_4,
+        type=_validate_max_width,
         default=None,
         metavar="N",
         help=(
-            "Cap each column's width at N characters (minimum 4). Cells "
-            "longer than N are truncated to (N-3) characters of original "
-            "content followed by '...', so the truncated cell's total width "
-            "is exactly N. Header rows truncate the same as data rows. "
-            "Without this flag, output is byte-for-byte identical to the "
-            "pre-flag implementation."
+            f"Cap each column's width at N characters (minimum {_MIN_MAX_WIDTH}). "
+            f"Cells longer than N are truncated to (N-{len(_ELLIPSIS)}) characters "
+            f"of original content followed by {_ELLIPSIS!r}, so the truncated "
+            "cell's total width is exactly N. Header rows truncate the same as "
+            "data rows. Without this flag, output is byte-for-byte identical to "
+            "the pre-flag implementation."
         ),
     )
     args = parser.parse_args()

@@ -7,7 +7,14 @@ import sys
 import unittest
 from unittest import mock
 
-from table_fmt import _positive_int_at_least_4, format_table, main, parse_table
+from table_fmt import (
+    _ELLIPSIS,
+    _MIN_MAX_WIDTH,
+    _validate_max_width,
+    format_table,
+    main,
+    parse_table,
+)
 
 
 class ParseAlignmentTests(unittest.TestCase):
@@ -133,31 +140,33 @@ class MaxWidthValidatorTests(unittest.TestCase):
     """Pure unit tests for the argparse type= validator."""
 
     def test_accepts_minimum_value(self):
-        self.assertEqual(_positive_int_at_least_4("4"), 4)
+        self.assertEqual(
+            _validate_max_width(str(_MIN_MAX_WIDTH)), _MIN_MAX_WIDTH
+        )
 
     def test_accepts_larger_value(self):
-        self.assertEqual(_positive_int_at_least_4("100"), 100)
+        self.assertEqual(_validate_max_width("100"), 100)
 
     def test_rejects_non_integer(self):
         with self.assertRaises(argparse.ArgumentTypeError) as exc:
-            _positive_int_at_least_4("foo")
+            _validate_max_width("foo")
         self.assertIn("--max-width", str(exc.exception))
         self.assertIn("integer", str(exc.exception))
 
     def test_rejects_zero(self):
         with self.assertRaises(argparse.ArgumentTypeError) as exc:
-            _positive_int_at_least_4("0")
-        self.assertIn(">= 4", str(exc.exception))
+            _validate_max_width("0")
+        self.assertIn(f">= {_MIN_MAX_WIDTH}", str(exc.exception))
 
-    def test_rejects_three(self):
+    def test_rejects_below_minimum(self):
         with self.assertRaises(argparse.ArgumentTypeError) as exc:
-            _positive_int_at_least_4("3")
-        self.assertIn(">= 4", str(exc.exception))
+            _validate_max_width(str(_MIN_MAX_WIDTH - 1))
+        self.assertIn(f">= {_MIN_MAX_WIDTH}", str(exc.exception))
 
     def test_rejects_negative(self):
         with self.assertRaises(argparse.ArgumentTypeError) as exc:
-            _positive_int_at_least_4("-1")
-        self.assertIn(">= 4", str(exc.exception))
+            _validate_max_width("-1")
+        self.assertIn(f">= {_MIN_MAX_WIDTH}", str(exc.exception))
 
 
 class MaxWidthFormatTests(unittest.TestCase):
@@ -199,11 +208,23 @@ class MaxWidthFormatTests(unittest.TestCase):
 
     def test_already_short_input_is_byte_identical(self):
         # When every column already fits, --max-width is a no-op at the byte
-        # level — proves R1's "columns that already fit are emitted unchanged".
+        # level — proves "columns that already fit are emitted unchanged".
         rows = [["A", "B"], ["x", "y"]]
         without = format_table(rows)
         with_flag = format_table(rows, max_width=10)
         self.assertEqual(without, with_flag)
+
+    def test_cell_of_exact_max_width_is_not_truncated(self):
+        # Boundary fence: the column-skip branch (widest <= max_width) and
+        # the per-cell skip (len(cell) > max_width) both use strict ">".
+        # A cell whose length equals max_width must be left untouched —
+        # no '...' suffix, content preserved.
+        rows = [["H"], ["abcdefghij"]]  # data cell length 10
+        out = format_table(rows, max_width=10)
+        data_cell = out.splitlines()[2].split("|")[1].strip()
+        self.assertEqual(data_cell, "abcdefghij")
+        self.assertEqual(len(data_cell), 10)
+        self.assertNotIn(_ELLIPSIS, data_cell)
 
     def test_header_row_is_truncated(self):
         rows = [["VERY_LONG_HEADER", "B"], ["x", "y"]]
@@ -230,7 +251,8 @@ class MaxWidthFormatTests(unittest.TestCase):
     def test_idempotent_under_repeated_max_width(self):
         # parse → format → parse → format with the same max_width must be a
         # fixed point. Mirrors the existing test_mixed_alignments_round_trip
-        # pattern from RoundTripTests.
+        # pattern from RoundTripTests. A third pass guards against
+        # alternating-output regressions that two passes would miss.
         original = (
             "| Name | Description | Code |\n"
             "| :--- | --- | ---: |\n"
@@ -241,6 +263,9 @@ class MaxWidthFormatTests(unittest.TestCase):
         rows2, alignments2 = parse_table(once)
         twice = format_table(rows2, alignments2, max_width=15)
         self.assertEqual(once, twice)
+        rows3, alignments3 = parse_table(twice)
+        thrice = format_table(rows3, alignments3, max_width=15)
+        self.assertEqual(twice, thrice)
 
     def test_n_equals_minimum_4_leaves_one_content_char(self):
         # Boundary: max_width == 4 produces (1 content char) + "..." = 4 total.
@@ -260,15 +285,20 @@ def _run_main(argv, stdin_text):
     """Helper: invoke main() with patched argv/stdin/stdout/stderr.
 
     Returns (exit_code, stdout, stderr). exit_code is 0 if main() returned
-    normally; otherwise the SystemExit code (argparse uses 2 for validation
-    failures, the script uses 1 for "no valid table" input).
+    normally or raised SystemExit(None); otherwise the SystemExit code
+    (argparse uses 2 for validation failures, the script uses 1 for "no
+    valid table" input). Relies on argparse resolving sys.stderr at
+    write-time, not at parser construction — if that ever changes, the
+    stderr captures here would silently break.
     """
     stdout = io.StringIO()
     stderr = io.StringIO()
-    with mock.patch.object(sys, "argv", argv), \
-         mock.patch.object(sys, "stdin", io.StringIO(stdin_text)), \
-         mock.patch.object(sys, "stdout", stdout), \
-         mock.patch.object(sys, "stderr", stderr):
+    with (
+        mock.patch.object(sys, "argv", argv),
+        mock.patch.object(sys, "stdin", io.StringIO(stdin_text)),
+        mock.patch.object(sys, "stdout", stdout),
+        mock.patch.object(sys, "stderr", stderr),
+    ):
         try:
             main()
             exit_code = 0
@@ -331,14 +361,14 @@ class CLIArgparseTests(unittest.TestCase):
         )
         self.assertEqual(code, 2)
         self.assertIn("--max-width", err)
-        self.assertIn(">= 4", err)
+        self.assertIn(f">= {_MIN_MAX_WIDTH}", err)
 
     def test_max_width_three_is_rejected(self):
         code, _, err = _run_main(
             ["table_fmt.py", "--max-width", "3"], ""
         )
         self.assertEqual(code, 2)
-        self.assertIn(">= 4", err)
+        self.assertIn(f">= {_MIN_MAX_WIDTH}", err)
 
     def test_max_width_four_smoke_test(self):
         # N=4 is the boundary. Just confirm acceptance and a sane output.
@@ -354,18 +384,15 @@ class CLIArgparseTests(unittest.TestCase):
         self.assertIn("|", out)
 
     def test_help_documents_max_width_with_minimum(self):
-        # R5: --help mentions the flag and the minimum value of 4.
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        with mock.patch.object(sys, "argv", ["table_fmt.py", "--help"]), \
-             mock.patch.object(sys, "stdout", stdout), \
-             mock.patch.object(sys, "stderr", stderr):
-            with self.assertRaises(SystemExit) as exc:
-                main()
-        self.assertEqual(exc.exception.code, 0)
-        help_text = stdout.getvalue()
+        # R5: --help mentions the flag and the documented minimum value.
+        # Using `f"minimum {_MIN_MAX_WIDTH}"` couples the assertion to the
+        # actual constant rather than a bare digit that could match
+        # incidental "4"s drifting into the help text.
+        code, help_text, err = _run_main(["table_fmt.py", "--help"], "")
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
         self.assertIn("--max-width", help_text)
-        self.assertIn("4", help_text)
+        self.assertIn(f"minimum {_MIN_MAX_WIDTH}", help_text)
 
 
 if __name__ == "__main__":
