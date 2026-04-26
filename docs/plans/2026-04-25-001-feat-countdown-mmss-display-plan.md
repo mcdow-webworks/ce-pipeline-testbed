@@ -1,7 +1,7 @@
 ---
 title: Format countdown remaining time as MM:SS
 type: feat
-status: active
+status: completed
 date: 2026-04-25
 origin: docs/brainstorms/2026-04-25-countdown-mmss-display-requirements.md
 ---
@@ -126,7 +126,7 @@ display refinement (see origin: `docs/brainstorms/2026-04-25-countdown-mmss-disp
 
 ## Implementation Units
 
-- [ ] **Unit 1: Render remaining time as MM:SS / H:MM:SS in `countdown.sh`**
+- [x] **Unit 1: Render remaining time as MM:SS / H:MM:SS in `countdown.sh`**
 
 **Goal:** Replace the bare-seconds tick output with banded clock-style
 formatting that flips live across thresholds and redraws cleanly when
