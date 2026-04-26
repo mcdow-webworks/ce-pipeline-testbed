@@ -189,6 +189,13 @@ class FormatJsonTests(unittest.TestCase):
         self.assertIn("Café", out)
         self.assertNotIn("\\u00e9", out)
 
+    def test_header_only_table_emits_empty_array(self):
+        # When the parser yields only the header row (no data rows beneath the
+        # separator), format_json returns an empty array — no keys to emit.
+        out = format_json([["Name", "Age"]], [None, None])
+        self.assertEqual(json.loads(out), [])
+        self.assertEqual(out, "[]\n")
+
 
 class MainCliTests(unittest.TestCase):
     def _run_main(self, argv, stdin_text):
@@ -295,6 +302,26 @@ class MainCliTests(unittest.TestCase):
         self.assertEqual(stdout, "")
         self.assertIn("duplicate header", stderr)
         self.assertIn("'Name'", stderr)
+
+    def test_main_with_default_argv_uses_sys_argv(self):
+        # The production entrypoint (table_fmt.py:199) calls main() with no
+        # arguments, which makes argparse fall back to sys.argv[1:]. Pin that
+        # path so a future refactor that drops the argv=None default fails here
+        # rather than only at runtime.
+        stdin_text = (
+            "| Name | Age |\n"
+            "| --- | --- |\n"
+            "| Alice | 30 |\n"
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with patch.object(table_fmt.sys, "stdin", io.StringIO(stdin_text)), \
+             patch.object(table_fmt.sys, "stdout", stdout), \
+             patch.object(table_fmt.sys, "stderr", stderr), \
+             patch.object(table_fmt.sys, "argv", ["table_fmt.py"]):
+            table_fmt.main()  # no argv argument — exercises the default-arg path
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn("| Name", stdout.getvalue())
 
 
 if __name__ == "__main__":
