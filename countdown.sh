@@ -3,6 +3,7 @@
 # Defaults
 DURATION=60
 SILENT=false
+NO_BELL=false
 
 # Argument parsing
 for arg in "$@"; do
@@ -14,13 +15,17 @@ Usage: countdown.sh [OPTIONS] [SECONDS]
 Count down from SECONDS (default: 60) and print "Time's up!" at zero.
 
 Options:
-  --help     Show this help message and exit
-  --silent   Only print the final message
+  --help      Show this help message and exit
+  --silent    Only print the final message; suppresses bell
+  --no-bell   Show the visual countdown but suppress the audible bell
 USAGE
             exit 0
             ;;
         --silent)
             SILENT=true
+            ;;
+        --no-bell)
+            NO_BELL=true
             ;;
         *)
             DURATION="$arg"
@@ -50,5 +55,8 @@ done
 # Final output
 if [[ "$SILENT" == false ]]; then
     printf "\n"
+fi
+if [[ "$SILENT" == false && "$NO_BELL" == false ]]; then
+    printf '\a'
 fi
 echo "Time's up!"
