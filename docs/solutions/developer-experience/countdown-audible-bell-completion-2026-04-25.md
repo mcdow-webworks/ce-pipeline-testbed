@@ -1,7 +1,7 @@
 ---
 title: "Add Audible Bell to Countdown Completion"
 date: 2026-04-25
-category: docs/solutions/developer-experience/
+category: developer-experience
 module: countdown-tool
 problem_type: developer_experience
 component: tooling
