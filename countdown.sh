@@ -3,6 +3,7 @@
 # Defaults
 DURATION=60
 SILENT=false
+NO_FINAL_NEWLINE=false
 
 # Argument parsing
 for arg in "$@"; do
@@ -14,13 +15,18 @@ Usage: countdown.sh [OPTIONS] [SECONDS]
 Count down from SECONDS (default: 60) and print "Time's up!" at zero.
 
 Options:
-  --help     Show this help message and exit
-  --silent   Only print the final message
+  --help               Show this help message and exit
+  --silent             Only print the final message
+  --no-final-newline   Suppress the trailing newline after "Time's up!"
+                       (no-op when combined with --silent)
 USAGE
             exit 0
             ;;
         --silent)
             SILENT=true
+            ;;
+        --no-final-newline)
+            NO_FINAL_NEWLINE=true
             ;;
         *)
             DURATION="$arg"
@@ -51,4 +57,8 @@ done
 if [[ "$SILENT" == false ]]; then
     printf "\n"
 fi
-echo "Time's up!"
+if [[ "$SILENT" == false && "$NO_FINAL_NEWLINE" == true ]]; then
+    printf "Time's up!"
+else
+    echo "Time's up!"
+fi

@@ -1,0 +1,4 @@
+# Shell scripts must be LF on every platform — bash on Linux (and the WSL
+# bash that subprocess.run finds first on Windows) treats CR as part of the
+# command on each line, breaking CRLF-checked-out scripts.
+*.sh text eol=lf
