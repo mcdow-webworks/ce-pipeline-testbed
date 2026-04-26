@@ -1,7 +1,7 @@
 ---
 title: "feat: Add --start-message flag to countdown.sh"
 type: feat
-status: active
+status: completed
 date: 2026-04-26
 origin: docs/brainstorms/2026-04-26-start-message-flag-requirements.md
 ---
@@ -57,7 +57,7 @@ Add a `--start-message <text>` flag to `countdown.sh` that prints a custom messa
 
 ## Implementation Units
 
-- [ ] **Unit 1: Add --start-message flag to countdown.sh**
+- [x] **Unit 1: Add --start-message flag to countdown.sh**
 
 **Goal:** Implement the flag with argparse handling, conditional output, and help documentation.
 
