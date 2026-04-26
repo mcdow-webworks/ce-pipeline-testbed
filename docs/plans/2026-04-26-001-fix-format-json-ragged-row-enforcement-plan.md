@@ -1,10 +1,11 @@
 ---
 title: "fix: format_json — raise ValueError on ragged rows"
 type: fix
-status: active
+status: blocked
 date: 2026-04-26
 origin: docs/brainstorms/2026-04-26-format-json-ragged-row-policy-requirements.md
 issue: 114
+blocked_on: PR #110 (commit cecc635 — feat(table_fmt): add --json output mode) not yet merged to master
 ---
 
 # fix: `format_json` — raise `ValueError` on ragged rows
@@ -388,3 +389,51 @@ exit 1 with `Error: …` on stderr and no stdout, exercising the
   is **not present in this branch's `.context/` tree**. The relevant
   reviewer guidance is preserved in the brainstorm's "Notes from review"
   carry-forward, so the missing artifact does not block planning.
+
+## Work Phase Outcome (2026-04-26)
+
+**Status: blocked — dependency PR #110 not yet on this branch's base.**
+
+`/ce:work` ran on `claude/issue-114` and stopped before code changes per the
+plan's explicit dependency clause ("If `format_json` is not present in
+`table_fmt.py` when implementation starts, surface the discrepancy and stop
+— this fix has nothing to operate on otherwise").
+
+### What was checked
+
+- `claude/issue-114` HEAD (`bccbffe`): `table_fmt.py` does **not** contain
+  `format_json`. Only `parse_table`, `format_table`, and `main()` are
+  present.
+- `master` HEAD (`d02bb44`): same — no `format_json`.
+- `origin/master` HEAD (`d02bb44`): same — no `format_json`.
+- The `format_json` feature commit (`cecc635 feat(table_fmt): add --json
+  output mode (#109)`) lives on `claude/issue-109` (and `origin/claude/issue-109`)
+  and has not yet been merged to master.
+- The merge-base of `claude/issue-114` against `master` is `d02bb44` (a
+  pre-`format_json` commit), confirming this branch was cut before the
+  `--json` feature landed.
+
+### Why no code change was made
+
+The plan's Risks & Dependencies section already anticipated this exact
+state: *"If implementation starts before PR #110 is merged into this
+branch's base, the implementer should surface the discrepancy rather than
+re-implement `format_json`."* Implementing the ragged-row guard against a
+fabricated `format_json` would re-implement PR #110 inside this PR's diff,
+which would (a) duplicate the feature when both PRs eventually merge to
+master and (b) couple this fix's review to the still-open `--json` feature
+review.
+
+### Recommended next step
+
+Re-run `/ce:work` on `claude/issue-114` after the base resolves. Either:
+
+1. PR #110 (issue #109) merges to master and `claude/issue-114` is rebased
+   onto the new master tip, so `format_json` is present in the working
+   tree, **or**
+2. The pipeline merges `claude/issue-109` into `claude/issue-114`'s base
+   explicitly before the work phase runs.
+
+The plan, brainstorm, and pre-verified references in this branch remain
+valid as-is — only the base needs to advance. The Implementation Units
+checkboxes are left unchecked to reflect that no code work was performed.
