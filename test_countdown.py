@@ -65,6 +65,11 @@ class FormatTickMmSsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "10:00")
 
+    def test_zero_seconds_renders_double_zero(self):
+        result = format_tick(0, "mm-ss")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "00:00")
+
 
 class FormatTickHumanTests(unittest.TestCase):
     def test_seconds_only_when_under_a_minute(self):
@@ -91,6 +96,18 @@ class FormatTickHumanTests(unittest.TestCase):
         result = format_tick(3600, "human")
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "60m")
+
+    def test_zero_seconds_renders_zero_s(self):
+        result = format_tick(0, "human")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "0s")
+
+
+class FormatTickUnknownModeTests(unittest.TestCase):
+    def test_unknown_mode_returns_nonzero_with_empty_stdout(self):
+        result = format_tick(30, "unknown")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
 
 
 class CliTickFormatTests(unittest.TestCase):
@@ -121,6 +138,9 @@ class CliErrorPathTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--tick-format", result.stderr)
         self.assertIn("foo", result.stderr)
+        self.assertIn("seconds", result.stderr)
+        self.assertIn("mm-ss", result.stderr)
+        self.assertIn("human", result.stderr)
         self.assertNotIn("Time remaining", result.stdout)
         self.assertNotIn("Time's up!", result.stdout)
 
