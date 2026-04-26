@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Markdown table formatter — reads sloppy tables from stdin, outputs aligned columns."""
 
+import argparse
 import sys
 
 
@@ -58,7 +59,7 @@ def parse_table(text):
     return rows, alignments
 
 
-def format_table(rows, alignments=None):
+def format_table(rows, alignments=None, strip_padding=False):
     """Return a formatted markdown table string with columns padded to equal width.
 
     The first row is treated as the header. A separator row is inserted after the
@@ -71,6 +72,11 @@ def format_table(rows, alignments=None):
     ``alignments`` list shorter than the number of columns is allowed; missing
     trailing entries fall back to the ``None`` default. Extra entries beyond
     the column count are ignored.
+
+    When ``strip_padding`` is true, data rows (header + body) are emitted with
+    no whitespace between the pipes and the cell content (``|a|b|``). The
+    separator row keeps its standard padded form so the output remains valid
+    markdown.
     """
     if not rows:
         return ""
@@ -99,6 +105,8 @@ def format_table(rows, alignments=None):
         return text.ljust(width)
 
     def format_row(cells):
+        if strip_padding:
+            return "|" + "|".join(cells[i] for i in range(num_cols)) + "|"
         padded = [pad_cell(cells[i], col_widths[i], align_for(i)) for i in range(num_cols)]
         return "| " + " | ".join(padded) + " |"
 
@@ -122,12 +130,25 @@ def format_table(rows, alignments=None):
 
 def main():
     """Read a markdown table from stdin, format it, and print to stdout."""
+    parser = argparse.ArgumentParser(
+        description="Format a markdown table read from stdin and write the result to stdout.",
+    )
+    parser.add_argument(
+        "--strip-padding",
+        action="store_true",
+        help=(
+            "Emit data rows without surrounding whitespace inside cells "
+            "(|a|b| instead of | a | b |). The separator row is left "
+            "unchanged so the output remains valid markdown."
+        ),
+    )
+    args = parser.parse_args()
     text = sys.stdin.read()
     rows, alignments = parse_table(text)
     if not rows:
         print("Error: no valid markdown table found in input", file=sys.stderr)
         sys.exit(1)
-    sys.stdout.write(format_table(rows, alignments))
+    sys.stdout.write(format_table(rows, alignments, strip_padding=args.strip_padding))
 
 
 if __name__ == "__main__":

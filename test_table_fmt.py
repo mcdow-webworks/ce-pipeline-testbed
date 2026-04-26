@@ -91,6 +91,38 @@ class FormatRowPaddingTests(unittest.TestCase):
         self.assertEqual(lines[2], "| Alice |  30 | NYC  |")
 
 
+class StripPaddingTests(unittest.TestCase):
+    def test_data_rows_emitted_without_surrounding_whitespace(self):
+        rows = [["a", "b"], ["x", "y"]]
+        out = format_table(rows, strip_padding=True)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "|a|b|")
+        self.assertEqual(lines[2], "|x|y|")
+
+    def test_separator_row_unchanged_under_strip_padding(self):
+        rows = [["a", "b"], ["x", "y"]]
+        out_stripped = format_table(rows, strip_padding=True)
+        out_padded = format_table(rows, strip_padding=False)
+        self.assertEqual(
+            out_stripped.splitlines()[1],
+            out_padded.splitlines()[1],
+        )
+
+    def test_alignment_colons_preserved_on_separator(self):
+        rows = [["H1", "H2", "H3"], ["a", "b", "c"]]
+        out = format_table(rows, ["left", "right", "center"], strip_padding=True)
+        self.assertEqual(out.splitlines()[1], "| :-- | --: | :-: |")
+
+    def test_default_false_matches_explicit_false(self):
+        rows = [["A", "B"], ["x", "y"]]
+        self.assertEqual(format_table(rows), format_table(rows, strip_padding=False))
+
+    def test_inner_cell_whitespace_is_preserved(self):
+        rows = [["Header"], ["hello world"]]
+        out = format_table(rows, strip_padding=True)
+        self.assertEqual(out.splitlines()[2], "|hello world|")
+
+
 class RoundTripTests(unittest.TestCase):
     def test_mixed_alignments_round_trip(self):
         original = (
