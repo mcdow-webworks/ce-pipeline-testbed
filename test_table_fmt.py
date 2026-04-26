@@ -3,7 +3,7 @@
 
 import unittest
 
-from table_fmt import format_table, parse_table
+from table_fmt import _split_cells, format_table, parse_table
 
 
 class ParseAlignmentTests(unittest.TestCase):
@@ -123,6 +123,78 @@ class RoundTripTests(unittest.TestCase):
             "| x   | y   |\n"
         )
         self.assertEqual(out, expected)
+
+
+class SplitCellsTests(unittest.TestCase):
+    def test_plain_row_matches_str_split(self):
+        row = "| a | b | c |"
+        self.assertEqual(_split_cells(row), row.split("|"))
+
+    def test_escaped_pipe_unescapes_in_cell(self):
+        # `| a \| b |` -> single cell with logical content `a | b`
+        self.assertEqual(_split_cells(r"| a \| b |"), ["", " a | b ", ""])
+
+    def test_escaped_backslash_then_separator(self):
+        # `| a \\| b |` -> cell ends in literal `\\`, then a real separator.
+        # The naive (?<!\\)\| regex misclassifies this case.
+        self.assertEqual(_split_cells(r"| a \\| b |"), ["", r" a \\", " b ", ""])
+
+    def test_escaped_backslash_then_escaped_pipe(self):
+        # `| a \\\| b |` -> single cell whose content is ` a \\| b `.
+        # Documents that the 2-char-unit rule composes left-to-right.
+        self.assertEqual(_split_cells(r"| a \\\| b |"), ["", r" a \\| b ", ""])
+
+    def test_non_pipe_escape_passes_through(self):
+        # Backslash followed by anything other than `|` is left verbatim.
+        self.assertEqual(_split_cells(r"| a \n b |"), ["", r" a \n b ", ""])
+
+    def test_lone_trailing_backslash_stays_in_cell(self):
+        # Trailing `\` with no following char must not read out of range.
+        self.assertEqual(_split_cells("| foo \\"), ["", " foo \\"])
+
+
+class EscapedPipeTests(unittest.TestCase):
+    def test_parse_treats_escaped_pipe_as_literal(self):
+        rows, alignments = parse_table(r"| a \| b |" + "\n")
+        self.assertEqual(rows, [["a | b"]])
+        self.assertEqual(alignments, [])
+
+    def test_parse_full_table_with_escaped_pipe(self):
+        text = (
+            "| Name | Pipe |\n"
+            "| --- | --- |\n"
+            r"| Alice | a \| b |" + "\n"
+        )
+        rows, alignments = parse_table(text)
+        self.assertEqual(rows, [["Name", "Pipe"], ["Alice", "a | b"]])
+        self.assertEqual(alignments, [None, None])
+
+    def test_format_re_escapes_literal_pipe(self):
+        out = format_table([["H"], ["a | b"]])
+        body = out.splitlines()[2]
+        self.assertEqual(body, r"| a \| b |")
+
+    def test_format_width_uses_encoded_form(self):
+        # Logical "a | b" (5 chars) encodes to "a \| b" (6 chars). Column width
+        # must be driven by the encoded length, not the logical length.
+        out = format_table([["x"], ["a | b"]])
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "| x      |")
+        self.assertEqual(lines[1], "| ------ |")
+        self.assertEqual(lines[2], r"| a \| b |")
+
+    def test_round_trip_fixed_point_with_escaped_pipe(self):
+        original = (
+            "| Name | Pipe   |\n"
+            "| ---- | ------ |\n"
+            r"| A    | a \| b |" + "\n"
+        )
+        rows, alignments = parse_table(original)
+        once = format_table(rows, alignments)
+        rows2, alignments2 = parse_table(once)
+        twice = format_table(rows2, alignments2)
+        self.assertEqual(once, twice)
+        self.assertEqual(rows2, [["Name", "Pipe"], ["A", "a | b"]])
 
 
 if __name__ == "__main__":

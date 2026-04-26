@@ -24,6 +24,47 @@ def _parse_alignment(cell):
     return None
 
 
+def _split_cells(row):
+    r"""Split a row string on bare ``|``, treating ``\|`` as a literal pipe.
+
+    Walks the string character by character so each ``\X`` is consumed as a
+    two-character unit: ``\|`` unescapes to ``|`` inside the current cell,
+    every other ``\X`` passes through verbatim, and a lone trailing ``\``
+    stays in the current cell. A bare ``|`` flushes the current cell.
+
+    Returns the same outer shape ``str.split("|")`` did, including the empty
+    leading and trailing entries produced by ``| ... |`` borders, so callers
+    don't need to change their trim logic.
+
+    Implementation note: do not "simplify" this with ``re.split(r"(?<!\\)\|",
+    ...)`` — that pattern misclassifies ``\\|`` (escaped backslash followed
+    by a real separator) by treating the second ``\`` as escaping the ``|``.
+    """
+    cells = []
+    buf = []
+    i = 0
+    n = len(row)
+    while i < n:
+        ch = row[i]
+        if ch == "\\" and i + 1 < n:
+            nxt = row[i + 1]
+            if nxt == "|":
+                buf.append("|")
+            else:
+                buf.append(ch)
+                buf.append(nxt)
+            i += 2
+        elif ch == "|":
+            cells.append("".join(buf))
+            buf = []
+            i += 1
+        else:
+            buf.append(ch)
+            i += 1
+    cells.append("".join(buf))
+    return cells
+
+
 def parse_table(text):
     """Parse a markdown table string into ``(rows, alignments)``.
 
@@ -40,8 +81,9 @@ def parse_table(text):
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        # Split on pipes, drop the empty first/last elements from leading/trailing |
-        cells = stripped.split("|")
+        # Split on pipes (treating \| as a literal pipe), drop the empty
+        # first/last elements from leading/trailing |.
+        cells = _split_cells(stripped)
         if cells and cells[0].strip() == "":
             cells = cells[1:]
         if cells and cells[-1].strip() == "":
@@ -82,10 +124,16 @@ def format_table(rows, alignments=None):
     num_cols = max(len(row) for row in rows)
     normalised = [row + [""] * (num_cols - len(row)) for row in rows]
 
-    # Compute column widths (minimum 3 for separator aesthetics)
+    # Encode literal pipes in cell content (| -> \|). Only `|` is structurally
+    # significant to the table grammar; `\` is intentionally not re-escaped so
+    # cells whose content really is a single `\` (paths, regex, code) survive.
+    encoded = [[cell.replace("|", "\\|") for cell in row] for row in normalised]
+
+    # Compute column widths from the encoded form so visual alignment holds
+    # when a cell contains a literal `|` (encoded form is one char longer).
     col_widths = []
     for col in range(num_cols):
-        width = max((len(normalised[r][col]) for r in range(len(normalised))), default=3)
+        width = max((len(encoded[r][col]) for r in range(len(encoded))), default=3)
         col_widths.append(max(width, 3))
 
     def align_for(i):
@@ -111,10 +159,10 @@ def format_table(rows, alignments=None):
             return ":" + "-" * (width - 1)
         return "-" * width
 
-    lines = [format_row(normalised[0])]
+    lines = [format_row(encoded[0])]
     sep_cells = [separator_cell(col_widths[i], align_for(i)) for i in range(num_cols)]
     lines.append("| " + " | ".join(sep_cells) + " |")
-    for row in normalised[1:]:
+    for row in encoded[1:]:
         lines.append(format_row(row))
 
     return "\n".join(lines) + "\n"
