@@ -24,6 +24,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 | Doc | Tags | Date |
 |-----|------|------|
 | [table_fmt silently discards markdown column-alignment hints](logic-errors/table-fmt-respect-column-alignment-2026-04-24.md) | markdown, table, alignment, cli, formatting | 2026-04-24 |
+| [table_fmt splits cells on every `\|`, corrupting cells that contain an escaped pipe](logic-errors/table-fmt-handle-escaped-pipes-in-cells-2026-04-25.md) | markdown, table, escape, pipe, cli, formatting, round-trip | 2026-04-25 |
 
 ## Workflow Issues
 
@@ -33,4 +34,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-25.*
