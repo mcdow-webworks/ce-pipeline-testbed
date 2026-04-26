@@ -10,6 +10,7 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 | Doc | Tags | Date |
 |-----|------|------|
+| [Adding a new output-mode flag to a stdin CLI without regressing the default](best-practices/table-fmt-add-cli-output-mode-flag-2026-04-26.md) | table-fmt, cli, argparse, json-output, formatter-pattern | 2026-04-26 |
 | [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
 
 ## Documentation Gaps
@@ -33,4 +34,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 4 categories. Last refreshed: 2026-04-26.*
