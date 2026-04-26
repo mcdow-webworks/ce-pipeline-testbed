@@ -27,6 +27,10 @@ USAGE
             shift
             ;;
         --start-message)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --start-message requires an argument" >&2
+                exit 1
+            fi
             START_MESSAGE="$2"
             shift 2
             ;;
