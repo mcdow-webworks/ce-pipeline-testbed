@@ -50,6 +50,10 @@ class NoFinalNewlineFlagTests(unittest.TestCase):
         result = run_countdown("1", "--no-final-newline")
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout[-1:], b"!")
+        self.assertTrue(
+            result.stdout.endswith(b"Time's up!"),
+            f"stdout did not end with 'Time's up!'; tail={result.stdout[-16:]!r}",
+        )
 
 
 class SilentInteractionTests(unittest.TestCase):
