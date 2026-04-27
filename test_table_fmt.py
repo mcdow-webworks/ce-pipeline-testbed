@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Tests for table_fmt: alignment parsing, separator emission, cell padding."""
 
+import os
+import subprocess
+import sys
 import unittest
 
-from table_fmt import format_table, parse_table
+from table_fmt import _is_empty_row, _strip_empty_rows, format_table, parse_table
+
+SCRIPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "table_fmt.py")
 
 
 class ParseAlignmentTests(unittest.TestCase):
@@ -123,6 +128,153 @@ class RoundTripTests(unittest.TestCase):
             "| x   | y   |\n"
         )
         self.assertEqual(out, expected)
+
+
+class IsEmptyRowTests(unittest.TestCase):
+    def test_all_empty_strings_is_empty(self):
+        self.assertTrue(_is_empty_row(["", "", ""]))
+
+    def test_all_ascii_whitespace_is_empty(self):
+        self.assertTrue(_is_empty_row(["   ", "\t", " \t "]))
+
+    def test_unicode_whitespace_is_empty(self):
+        # NBSP (U+00A0) and full-width space (U+3000) count as whitespace
+        # under Python's default str.strip(); a row of them is "empty".
+        self.assertTrue(_is_empty_row([" ", "　"]))
+
+    def test_zero_width_char_is_not_whitespace(self):
+        # U+200B is not str.isspace(); a row of zero-width chars is non-empty.
+        self.assertFalse(_is_empty_row(["​"]))
+
+    def test_mixed_with_one_non_empty_is_not_empty(self):
+        self.assertFalse(_is_empty_row(["", "x", ""]))
+
+    def test_single_empty_cell_is_empty(self):
+        self.assertTrue(_is_empty_row([""]))
+
+    def test_single_non_empty_cell_is_not_empty(self):
+        self.assertFalse(_is_empty_row(["x"]))
+
+    def test_empty_cell_list_vacuous_truth(self):
+        # all() on an empty iterable returns True; pins the vacuous-truth contract.
+        self.assertTrue(_is_empty_row([]))
+
+
+class StripEmptyRowsTests(unittest.TestCase):
+    def test_drops_all_empty_data_rows(self):
+        rows = [["H1", "H2"], ["a", "b"], ["", ""], ["c", "d"]]
+        self.assertEqual(
+            _strip_empty_rows(rows),
+            [["H1", "H2"], ["a", "b"], ["c", "d"]],
+        )
+
+    def test_drops_whitespace_only_data_rows(self):
+        rows = [["H1", "H2"], [" ", "\t"], ["a", "b"]]
+        self.assertEqual(
+            _strip_empty_rows(rows),
+            [["H1", "H2"], ["a", "b"]],
+        )
+
+    def test_keeps_rows_with_any_non_empty_cell(self):
+        rows = [["H1", "H2", "H3"], ["", "x", ""]]
+        self.assertEqual(_strip_empty_rows(rows), rows)
+
+    def test_preserves_empty_header_row(self):
+        rows = [["", "", ""], ["a", "b", "c"]]
+        self.assertEqual(_strip_empty_rows(rows), rows)
+
+    def test_preserves_empty_header_only_table(self):
+        rows = [["", "", ""]]
+        self.assertEqual(_strip_empty_rows(rows), rows)
+
+    def test_short_data_row_with_only_empty_cells_is_dropped(self):
+        # Edge case from issue: a 2-cell row in a 3-column table where both
+        # written cells are empty — should be stripped before normalization
+        # would otherwise pad it to a 3-empty-cell row.
+        rows = [["H1", "H2", "H3"], ["a", "b", "c"], ["", ""]]
+        self.assertEqual(
+            _strip_empty_rows(rows),
+            [["H1", "H2", "H3"], ["a", "b", "c"]],
+        )
+
+    def test_empty_input_returns_empty(self):
+        self.assertEqual(_strip_empty_rows([]), [])
+
+
+class FormatTableUnchangedWithoutFlagTests(unittest.TestCase):
+    """``format_table`` itself must never strip empty rows."""
+
+    def test_format_table_pads_empty_rows(self):
+        rows = [["H1", "H2"], ["a", "b"], ["", ""], ["c", "d"]]
+        out = format_table(rows)
+        lines = out.splitlines()
+        # 1 header + 1 separator + 3 data rows
+        self.assertEqual(len(lines), 5)
+        self.assertEqual(lines[3], "|     |     |")
+
+
+class StripEmptyRowsCliTests(unittest.TestCase):
+    """End-to-end CLI tests that exercise argparse wiring and behavior."""
+
+    def _run(self, stdin_text, *args):
+        return subprocess.run(
+            [sys.executable, SCRIPT_PATH, *args],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_strip_flag_drops_blank_data_rows(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "| x | y |\n"
+            "|   |   |\n"
+            "| u | v |\n"
+        )
+        result = self._run(text, "--strip-empty-rows")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        expected = (
+            "| A | B |\n"
+            "| - | - |\n"  # placeholder; recomputed below
+        )
+        # Compute exact expected output via the library.
+        rows, alignments = parse_table(text)
+        rows = _strip_empty_rows(rows)
+        expected = format_table(rows, alignments)
+        self.assertEqual(result.stdout, expected)
+
+    def test_no_flag_preserves_byte_for_byte_behavior(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "| x | y |\n"
+            "|   |   |\n"
+            "| u | v |\n"
+        )
+        result = self._run(text)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        rows, alignments = parse_table(text)
+        expected = format_table(rows, alignments)
+        self.assertEqual(result.stdout, expected)
+
+    def test_help_documents_strip_empty_rows_flag(self):
+        result = self._run("", "--help")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("--strip-empty-rows", result.stdout)
+
+    def test_strip_flag_all_data_rows_empty_produces_header_only_output(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "|   |   |\n"
+            "| \t | \t |\n"
+        )
+        result = self._run(text, "--strip-empty-rows")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        lines = result.stdout.splitlines()
+        # All data rows stripped; output contains header + separator only.
+        self.assertEqual(len(lines), 2)
 
 
 if __name__ == "__main__":

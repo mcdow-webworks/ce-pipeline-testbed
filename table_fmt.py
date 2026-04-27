@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Markdown table formatter — reads sloppy tables from stdin, outputs aligned columns."""
 
+import argparse
 import sys
 
 
@@ -56,6 +57,37 @@ def parse_table(text):
             continue
         rows.append([c.strip() for c in cells])
     return rows, alignments
+
+
+def _is_empty_row(cells):
+    """Return True when every cell in the row is empty or whitespace-only.
+
+    Whitespace is defined by Python's default ``str.strip()``, which strips
+    characters where ``str.isspace()`` is True. That covers ASCII whitespace,
+    non-breaking space (U+00A0), and full-width space (U+3000). Zero-width
+    characters such as U+200B do not count as whitespace and a row of them is
+    treated as non-empty. This matches the trimming convention already used
+    by ``parse_table``.
+    """
+    return all(not cell.strip() for cell in cells)
+
+
+def _strip_empty_rows(rows):
+    """Return ``rows`` with all-empty data rows removed; the header is preserved.
+
+    ``rows[0]`` is treated as the header (matching ``format_table``'s
+    convention) and is never stripped, even when every cell is empty — the
+    operator may intentionally be building a header-only table for downstream
+    consumers. The markdown separator row is consumed by ``parse_table`` and
+    never appears in ``rows``, so it cannot be stripped.
+
+    Applied before ``format_table``'s column-count normalization so the
+    predicate sees the cells the user actually wrote, not padding we added.
+    """
+    if not rows:
+        return rows
+    header, *data = rows
+    return [header] + [row for row in data if not _is_empty_row(row)]
 
 
 def format_table(rows, alignments=None):
@@ -122,11 +154,26 @@ def format_table(rows, alignments=None):
 
 def main():
     """Read a markdown table from stdin, format it, and print to stdout."""
+    parser = argparse.ArgumentParser(
+        description="Format a markdown table read from stdin and write the "
+        "result to stdout.",
+    )
+    parser.add_argument(
+        "--strip-empty-rows",
+        action="store_true",
+        help="Drop data rows whose cells are all empty or whitespace-only "
+        "before rendering. The header row is preserved even when every "
+        "cell is empty.",
+    )
+    args = parser.parse_args()
+
     text = sys.stdin.read()
     rows, alignments = parse_table(text)
     if not rows:
         print("Error: no valid markdown table found in input", file=sys.stderr)
         sys.exit(1)
+    if args.strip_empty_rows:
+        rows = _strip_empty_rows(rows)
     sys.stdout.write(format_table(rows, alignments))
 
 
