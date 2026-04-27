@@ -12,6 +12,12 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 |-----|------|------|
 | [Self-contained project status dashboard implementation](best-practices/project-status-dashboard-implementation-2026-04-06.md) | dashboard, html, static-page, project-status | 2026-04-06 |
 
+## Conventions
+
+| Doc | Tags | Date |
+|-----|------|------|
+| [Enforce LF line endings for shell scripts shelled from Python tests](conventions/lf-line-endings-for-shell-scripts-shelled-from-python-2026-04-26.md) | line-endings, gitattributes, bash, windows, cross-platform | 2026-04-26 |
+
 ## Documentation Gaps
 
 | Doc | Tags | Date |
@@ -33,4 +39,4 @@ Use this index before implementing a feature or fixing a bug — search for keyw
 
 ---
 
-*5 solutions across 4 categories. Last refreshed: 2026-04-24.*
+*6 solutions across 5 categories. Last refreshed: 2026-04-26.*
