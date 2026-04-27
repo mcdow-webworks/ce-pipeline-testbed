@@ -155,6 +155,10 @@ class IsEmptyRowTests(unittest.TestCase):
     def test_single_non_empty_cell_is_not_empty(self):
         self.assertFalse(_is_empty_row(["x"]))
 
+    def test_empty_cell_list_vacuous_truth(self):
+        # all() on an empty iterable returns True; pins the vacuous-truth contract.
+        self.assertTrue(_is_empty_row([]))
+
 
 class StripEmptyRowsTests(unittest.TestCase):
     def test_drops_all_empty_data_rows(self):
@@ -258,6 +262,19 @@ class StripEmptyRowsCliTests(unittest.TestCase):
         result = self._run("", "--help")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("--strip-empty-rows", result.stdout)
+
+    def test_strip_flag_all_data_rows_empty_produces_header_only_output(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "|   |   |\n"
+            "| \t | \t |\n"
+        )
+        result = self._run(text, "--strip-empty-rows")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        lines = result.stdout.splitlines()
+        # All data rows stripped; output contains header + separator only.
+        self.assertEqual(len(lines), 2)
 
 
 if __name__ == "__main__":
