@@ -7,7 +7,11 @@ import sys
 
 
 _YAML_NEEDS_QUOTE_START = frozenset(':!@%&*?|>\'"#-{[`')
-_YAML_BOOL_NULL = frozenset(['true', 'false', 'null', '~', 'yes', 'no', 'on', 'off'])
+_YAML_BOOL_NULL = frozenset([
+    'true', 'false', 'null', '~', 'yes', 'no', 'on', 'off',
+    # YAML 1.1 special float forms that Python's float() does not parse
+    '.inf', '+.inf', '-.inf', '.nan', '+.nan', '-.nan',
+])
 
 
 def _parse_alignment(cell):
@@ -212,7 +216,9 @@ def _yaml_scalar(value):
     )
     if not needs_quote:
         try:
-            int(value)
+            # base=0 catches 0x.../0o.../0b... prefixes that YAML 1.1 parsers
+            # interpret as integers (e.g. 0xff → 255)
+            int(value, 0)
             needs_quote = True
         except ValueError:
             try:
