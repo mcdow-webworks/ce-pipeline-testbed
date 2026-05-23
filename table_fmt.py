@@ -7,7 +7,7 @@ import re
 import sys
 
 
-_YAML_NEEDS_QUOTE_START = frozenset(':!@%&*?|>\'"#-{[`')
+_YAML_NEEDS_QUOTE_START = frozenset(':!@%&*?|>\'"#-{[`=')
 _YAML_BOOL_NULL = frozenset([
     'true', 'false', 'null', '~', 'yes', 'no', 'on', 'off',
     # YAML 1.1 single-letter booleans: PyYAML treats y/n/Y/N as True/False.
@@ -17,6 +17,9 @@ _YAML_BOOL_NULL = frozenset([
     # '-.inf' and '-.nan' are omitted: '-' is in _YAML_NEEDS_QUOTE_START
     # so leading-dash values are already quoted by the first guard.
     '.inf', '+.inf', '.nan', '+.nan',
+    # YAML 1.1 merge key: PyYAML tags bare '<<' as tag:yaml.org,2002:merge
+    # and raises ConstructorError when it appears in a non-merge position.
+    '<<',
 ])
 # YAML 1.1 bare-zero octals (e.g. 077 → 63, 0_77 → 63). Python 3 rejects
 # int('077', 0) and int('0__7', 0), so the numeric guard below misses them;
@@ -30,7 +33,7 @@ _YAML_SEXAGESIMAL = re.compile(r'^[-+]?[1-9][0-9_]*(:[0-5]?[0-9])+$')
 # and fuller forms as datetime.datetime. Anchor on the date prefix; the
 # optional suffix covers T/space-separated time components.
 _YAML_TIMESTAMP = re.compile(
-    r'^\d{4}-\d{1,2}-\d{1,2}([Tt \t][\d:.\-+Zz]*)?$'
+    r'^\d{4}-\d{1,2}-\d{1,2}((?:[Tt]|[ \t]+)[\d:.\-+Zz]*)?$'
 )
 
 

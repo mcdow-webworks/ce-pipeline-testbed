@@ -384,6 +384,22 @@ class YamlScalarTests(unittest.TestCase):
         self.assertEqual(_yaml_scalar("2024-01-01T12:00:00"), "'2024-01-01T12:00:00'")
         self.assertEqual(_yaml_scalar("2024-01-01 12:00:00"), "'2024-01-01 12:00:00'")
 
+    def test_iso8601_datetime_multi_whitespace_separator_quoted(self):
+        # PyYAML's timestamp resolver uses [ \t]+ (one-or-more spaces/tabs);
+        # the regex must match the same, not just a single whitespace char.
+        self.assertEqual(_yaml_scalar("2024-01-01  12:00:00"), "'2024-01-01  12:00:00'")
+        self.assertEqual(_yaml_scalar("2024-01-01\t\t12:00:00"), "'2024-01-01\t\t12:00:00'")
+
+    def test_equals_sign_quoted(self):
+        # PyYAML tags bare '=' as tag:yaml.org,2002:value; safe_load raises
+        # ConstructorError unless the value is single-quoted.
+        self.assertEqual(_yaml_scalar("="), "'='")
+
+    def test_yaml_merge_key_quoted(self):
+        # PyYAML tags bare '<<' as tag:yaml.org,2002:merge and raises
+        # ConstructorError when it appears as a mapping value or non-merge key.
+        self.assertEqual(_yaml_scalar("<<"), "'<<'")
+
 
 class FormatYamlTests(unittest.TestCase):
     def test_happy_path(self):
