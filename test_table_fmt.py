@@ -149,7 +149,7 @@ class IsEmptyRowTests(unittest.TestCase):
     def test_unicode_whitespace_is_empty(self):
         # NBSP (U+00A0) and full-width space (U+3000) count as whitespace
         # under Python's default str.strip(); a row of them is "empty".
-        self.assertTrue(_is_empty_row([" ", "　"]))
+        self.assertTrue(_is_empty_row([" ", "　"]))
 
     def test_zero_width_char_is_not_whitespace(self):
         # U+200B is not str.isspace(); a row of zero-width chars is non-empty.
@@ -317,6 +317,22 @@ class YamlScalarTests(unittest.TestCase):
     def test_single_quote_doubled_when_quoting_required(self):
         # When quoting is triggered (here by leading #), embedded ' are doubled.
         self.assertEqual(_yaml_scalar("#it's"), "'#it''s'")
+
+    def test_yaml11_special_floats_quoted(self):
+        # YAML 1.1 parsers interpret these as float infinity / NaN
+        for val in (".inf", "+.inf", "-.inf", ".nan", "+.nan", "-.nan"):
+            with self.subTest(val=val):
+                result = _yaml_scalar(val)
+                self.assertTrue(result.startswith("'"), f"{val!r} should be quoted")
+
+    def test_hex_integer_literal_quoted(self):
+        # YAML 1.1 parsers parse 0xff as integer 255
+        self.assertEqual(_yaml_scalar("0xff"), "'0xff'")
+        self.assertEqual(_yaml_scalar("0xFF"), "'0xFF'")
+
+    def test_octal_integer_literal_quoted(self):
+        # Python-style 0o prefix; conservative to quote these
+        self.assertEqual(_yaml_scalar("0o77"), "'0o77'")
 
 
 class FormatYamlTests(unittest.TestCase):
