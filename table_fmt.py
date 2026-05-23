@@ -2,7 +2,12 @@
 """Markdown table formatter — reads sloppy tables from stdin, outputs aligned columns."""
 
 import argparse
+import json
 import sys
+
+
+_YAML_NEEDS_QUOTE_START = frozenset(':!@%&*?|>\'"#-{[`')
+_YAML_BOOL_NULL = frozenset(['true', 'false', 'null', '~', 'yes', 'no', 'on', 'off'])
 
 
 def _parse_alignment(cell):
@@ -152,28 +157,174 @@ def format_table(rows, alignments=None):
     return "\n".join(lines) + "\n"
 
 
-def main():
-    """Read a markdown table from stdin, format it, and print to stdout."""
+def format_json(rows, alignments):
+    """Return a JSON string of row objects keyed by the header row.
+
+    The first row is the header; remaining rows are emitted as objects mapping
+    each header cell text to the corresponding cell text. All values are
+    strings — no type coercion. Output is pretty-printed with ``indent=2`` and
+    terminated with a single trailing newline; non-ASCII cell text is preserved
+    literally rather than escaped. Per-column ``alignments`` metadata has no
+    JSON representation and is intentionally dropped from the output, but the
+    list itself is consulted to detect whether the parser saw a separator row.
+
+    Preconditions: ``rows`` is non-empty (caller should have already errored on
+    no-table input). Raises ``ValueError`` when ``alignments`` is empty (no
+    separator row, so the header is unidentified) or when ``rows[0]`` contains
+    duplicate cell text (header keys would collide).
+    """
+    if not alignments:
+        raise ValueError(
+            "--json requires a header row (no separator row found in input)"
+        )
+
+    header = rows[0]
+    seen = set()
+    for name in header:
+        if name in seen:
+            raise ValueError(
+                f"--json requires unique header column names; duplicate header: '{name}'"
+            )
+        seen.add(name)
+
+    payload = [dict(zip(header, row)) for row in rows[1:]]
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+
+
+def _yaml_scalar(value):
+    """Return a YAML-safe plain or single-quoted scalar for a string value.
+
+    Single-quotes are used when the value is empty, starts with a
+    YAML-special character, matches a boolean/null keyword, contains
+    inline-comment or mapping-indicator sequences, or would be parsed as a
+    number by a YAML parser.  Single quotes inside the value are doubled
+    (the standard YAML escape for single-quoted scalars).
+    """
+    if not value:
+        return "''"
+    needs_quote = (
+        value[0] in _YAML_NEEDS_QUOTE_START
+        or value.lower() in _YAML_BOOL_NULL
+        or ": " in value
+        or value.endswith(":")
+        or " #" in value
+        or value != value.strip()
+    )
+    if not needs_quote:
+        try:
+            int(value)
+            needs_quote = True
+        except ValueError:
+            try:
+                float(value)
+                needs_quote = True
+            except ValueError:
+                pass
+    if needs_quote:
+        return "'" + value.replace("'", "''") + "'"
+    return value
+
+
+def format_yaml(rows, alignments):
+    """Return a YAML document of row objects keyed by the header row.
+
+    The first row is the header; remaining rows are emitted as a block-style
+    YAML list of mappings (one key per line). Header-only or empty-data input
+    emits ``'[]\\n'``. Requires a separator row (``alignments`` non-empty) to
+    identify the header row; raises ``ValueError`` when missing or when header
+    column names are not unique.
+    """
+    if not alignments:
+        raise ValueError(
+            "--yaml requires a header row (no separator row found in input)"
+        )
+
+    header = rows[0]
+    seen = set()
+    for name in header:
+        if name in seen:
+            raise ValueError(
+                f"--yaml requires unique header column names; duplicate header: '{name}'"
+            )
+        seen.add(name)
+
+    data_rows = rows[1:]
+    if not data_rows:
+        return "[]\n"
+
+    lines = []
+    for row in data_rows:
+        for i, key in enumerate(header):
+            cell = row[i] if i < len(row) else ""
+            prefix = "- " if i == 0 else "  "
+            lines.append(f"{prefix}{_yaml_scalar(key)}: {_yaml_scalar(cell)}")
+
+    return "\n".join(lines) + "\n"
+
+
+def main(argv=None):
+    """Read a markdown table from stdin, format it, and print to stdout.
+
+    Default mode emits a re-aligned markdown table. With ``--json`` or
+    ``--yaml``, emits structured data keyed by the header row instead.
+    ``--json`` and ``--yaml`` are mutually exclusive.
+    """
     parser = argparse.ArgumentParser(
-        description="Format a markdown table read from stdin and write the "
-        "result to stdout.",
+        description=(
+            "Format markdown tables from stdin. Default output is a re-aligned "
+            "markdown table. Use --json or --yaml to emit structured data instead."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit parsed table as a JSON array of row objects keyed by header",
+    )
+    parser.add_argument(
+        "--yaml",
+        action="store_true",
+        help="emit parsed table as a YAML list of row mappings keyed by header",
     )
     parser.add_argument(
         "--strip-empty-rows",
         action="store_true",
-        help="Drop data rows whose cells are all empty or whitespace-only "
+        help="drop data rows whose cells are all empty or whitespace-only "
         "before rendering. The header row is preserved even when every "
         "cell is empty.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    if args.json and args.yaml:
+        print("Error: --json and --yaml are mutually exclusive", file=sys.stderr)
+        sys.exit(1)
 
     text = sys.stdin.read()
     rows, alignments = parse_table(text)
     if not rows:
         print("Error: no valid markdown table found in input", file=sys.stderr)
         sys.exit(1)
+
     if args.strip_empty_rows:
         rows = _strip_empty_rows(rows)
+
+    if args.json:
+        try:
+            output = format_json(rows, alignments)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        sys.stdout.write(output)
+        return
+
+    if args.yaml:
+        try:
+            output = format_yaml(rows, alignments)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        sys.stdout.write(output)
+        return
+
     sys.stdout.write(format_table(rows, alignments))
 
 
