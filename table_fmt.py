@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 import sys
 
 
@@ -12,6 +13,9 @@ _YAML_BOOL_NULL = frozenset([
     # YAML 1.1 special float forms that Python's float() does not parse
     '.inf', '+.inf', '-.inf', '.nan', '+.nan', '-.nan',
 ])
+# YAML 1.1 bare-zero octals (e.g. 077 → 63). Python 3 rejects int('077', 0),
+# so the numeric guard below does not catch them; a dedicated regex is required.
+_YAML_BARE_OCTAL = re.compile(r'^0[0-7]+$')
 
 
 def _parse_alignment(cell):
@@ -181,6 +185,10 @@ def format_json(rows, alignments):
         raise ValueError(
             "--json requires a header row (no separator row found in input)"
         )
+    if not rows:
+        raise ValueError(
+            "--json requires a non-empty rows list (no header row)"
+        )
 
     header = rows[0]
     seen = set()
@@ -215,17 +223,22 @@ def _yaml_scalar(value):
         or value != value.strip()
     )
     if not needs_quote:
-        try:
-            # base=0 catches 0x.../0o.../0b... prefixes that YAML 1.1 parsers
-            # interpret as integers (e.g. 0xff → 255)
-            int(value, 0)
+        # YAML 1.1 bare-zero octals (077, 010…). Python 3 rejects int('077',0)
+        # so they would escape the numeric guard below without this explicit check.
+        if _YAML_BARE_OCTAL.match(value):
             needs_quote = True
-        except ValueError:
+        else:
             try:
-                float(value)
+                # base=0 catches 0x.../0o.../0b... prefixes that YAML 1.1 parsers
+                # interpret as integers (e.g. 0xff → 255)
+                int(value, 0)
                 needs_quote = True
             except ValueError:
-                pass
+                try:
+                    float(value)
+                    needs_quote = True
+                except ValueError:
+                    pass
     if needs_quote:
         return "'" + value.replace("'", "''") + "'"
     return value
@@ -243,6 +256,10 @@ def format_yaml(rows, alignments):
     if not alignments:
         raise ValueError(
             "--yaml requires a header row (no separator row found in input)"
+        )
+    if not rows:
+        raise ValueError(
+            "--yaml requires a non-empty rows list (no header row)"
         )
 
     header = rows[0]
