@@ -279,6 +279,12 @@ class FormatJsonTests(unittest.TestCase):
         self.assertEqual(json.loads(out), [])
         self.assertEqual(out, "[]\n")
 
+    def test_empty_rows_with_alignments_raises_value_error_not_index_error(self):
+        # parse_table returns rows=[], alignments=[...] for separator-only input.
+        # Library callers must get a ValueError, not an IndexError.
+        with self.assertRaises(ValueError):
+            format_json([], [None, None])
+
 
 class YamlScalarTests(unittest.TestCase):
     def test_plain_value_unquoted(self):
@@ -334,6 +340,13 @@ class YamlScalarTests(unittest.TestCase):
         # Python-style 0o prefix; conservative to quote these
         self.assertEqual(_yaml_scalar("0o77"), "'0o77'")
 
+    def test_bare_zero_octal_quoted(self):
+        # YAML 1.1 parsers (e.g. PyYAML) interpret 077 as octal 63.
+        # Python 3 rejects int('077', 0), so a dedicated regex is required.
+        self.assertEqual(_yaml_scalar("077"), "'077'")
+        self.assertEqual(_yaml_scalar("010"), "'010'")
+        self.assertEqual(_yaml_scalar("00"), "'00'")
+
 
 class FormatYamlTests(unittest.TestCase):
     def test_happy_path(self):
@@ -358,6 +371,12 @@ class FormatYamlTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             format_yaml(rows, [])
         self.assertIn("requires a header row", str(cm.exception))
+
+    def test_empty_rows_with_alignments_raises_value_error_not_index_error(self):
+        # parse_table returns rows=[], alignments=[...] for separator-only input.
+        # Library callers must get a ValueError, not an IndexError.
+        with self.assertRaises(ValueError):
+            format_yaml([], [None, None])
 
     def test_duplicate_header_raises_value_error(self):
         rows = [["Name", "Name"], ["a", "b"]]
