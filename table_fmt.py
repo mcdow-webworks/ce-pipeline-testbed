@@ -13,9 +13,10 @@ _YAML_BOOL_NULL = frozenset([
     # YAML 1.1 special float forms that Python's float() does not parse
     '.inf', '+.inf', '-.inf', '.nan', '+.nan', '-.nan',
 ])
-# YAML 1.1 bare-zero octals (e.g. 077 → 63). Python 3 rejects int('077', 0),
-# so the numeric guard below does not catch them; a dedicated regex is required.
-_YAML_BARE_OCTAL = re.compile(r'^0[0-7]+$')
+# YAML 1.1 bare-zero octals (e.g. 077 → 63, 0_77 → 63). Python 3 rejects
+# int('077', 0) and int('0__7', 0), so the numeric guard below misses them;
+# a dedicated regex is required. Pattern mirrors PyYAML's resolver: 0[0-7_]+.
+_YAML_BARE_OCTAL = re.compile(r'^0[0-7_]+$')
 
 
 def _parse_alignment(cell):
