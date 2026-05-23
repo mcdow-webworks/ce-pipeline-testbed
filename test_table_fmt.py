@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """Tests for table_fmt: alignment parsing, separator emission, cell padding."""
 
+import json
 import os
 import subprocess
 import sys
 import unittest
 
-from table_fmt import _is_empty_row, _strip_empty_rows, format_table, parse_table
+from table_fmt import (
+    _is_empty_row,
+    _strip_empty_rows,
+    _yaml_scalar,
+    format_json,
+    format_table,
+    format_yaml,
+    parse_table,
+)
 
 SCRIPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "table_fmt.py")
 
@@ -213,6 +222,203 @@ class FormatTableUnchangedWithoutFlagTests(unittest.TestCase):
         self.assertEqual(lines[3], "|     |     |")
 
 
+class FormatJsonTests(unittest.TestCase):
+    def test_basic_happy_path(self):
+        rows = [["Name", "Age"], ["Alice", "30"], ["Bob", "25"]]
+        out = format_json(rows, [None, None])
+        self.assertEqual(
+            json.loads(out),
+            [{"Name": "Alice", "Age": "30"}, {"Name": "Bob", "Age": "25"}],
+        )
+
+    def test_alignment_metadata_dropped(self):
+        rows = [["Name", "Age", "City"], ["Alice", "30", "NYC"]]
+        out = format_json(rows, ["left", "right", "center"])
+        self.assertEqual(
+            json.loads(out),
+            [{"Name": "Alice", "Age": "30", "City": "NYC"}],
+        )
+        self.assertNotIn("left", out)
+        self.assertNotIn("right", out)
+        self.assertNotIn("center", out)
+
+    def test_empty_cells_preserved_as_empty_string(self):
+        rows = [["Name", "Age"], ["Alice", ""]]
+        out = format_json(rows, [None, None])
+        self.assertEqual(json.loads(out), [{"Name": "Alice", "Age": ""}])
+
+    def test_pretty_printed_with_indent_2_and_trailing_newline(self):
+        rows = [["A", "B"], ["x", "y"]]
+        out = format_json(rows, [None, None])
+        expected = '[\n  {\n    "A": "x",\n    "B": "y"\n  }\n]\n'
+        self.assertEqual(out, expected)
+        self.assertTrue(out.endswith("\n"))
+        self.assertFalse(out.endswith("\n\n"))
+
+    def test_no_header_row_raises_value_error(self):
+        rows = [["A", "B"], ["x", "y"]]
+        with self.assertRaises(ValueError) as cm:
+            format_json(rows, [])
+        self.assertIn("requires a header row", str(cm.exception))
+
+    def test_duplicate_header_raises_value_error_naming_duplicate(self):
+        rows = [["Name", "Name"], ["a", "b"]]
+        with self.assertRaises(ValueError) as cm:
+            format_json(rows, [None, None])
+        self.assertIn("duplicate header", str(cm.exception))
+        self.assertIn("'Name'", str(cm.exception))
+
+    def test_non_ascii_cell_text_preserved_literally(self):
+        rows = [["City"], ["Café"]]
+        out = format_json(rows, [None])
+        self.assertIn("Café", out)
+        self.assertNotIn("\\u00e9", out)
+
+    def test_header_only_table_emits_empty_array(self):
+        out = format_json([["Name", "Age"]], [None, None])
+        self.assertEqual(json.loads(out), [])
+        self.assertEqual(out, "[]\n")
+
+    def test_empty_rows_with_alignments_raises_value_error_not_index_error(self):
+        # parse_table returns rows=[], alignments=[...] for separator-only input.
+        # Library callers must get a ValueError, not an IndexError.
+        with self.assertRaises(ValueError):
+            format_json([], [None, None])
+
+
+class YamlScalarTests(unittest.TestCase):
+    def test_plain_value_unquoted(self):
+        self.assertEqual(_yaml_scalar("hello"), "hello")
+
+    def test_empty_string_single_quoted(self):
+        self.assertEqual(_yaml_scalar(""), "''")
+
+    def test_colon_mapping_indicator_quoted(self):
+        self.assertEqual(_yaml_scalar("key: value"), "'key: value'")
+
+    def test_value_ending_with_colon_quoted(self):
+        self.assertEqual(_yaml_scalar("label:"), "'label:'")
+
+    def test_hash_at_start_quoted(self):
+        self.assertEqual(_yaml_scalar("#comment"), "'#comment'")
+
+    def test_inline_comment_marker_quoted(self):
+        self.assertEqual(_yaml_scalar("value #note"), "'value #note'")
+
+    def test_dash_at_start_quoted(self):
+        self.assertEqual(_yaml_scalar("- item"), "'- item'")
+
+    def test_leading_whitespace_quoted(self):
+        self.assertEqual(_yaml_scalar("  indented"), "'  indented'")
+
+    def test_boolean_true_quoted(self):
+        self.assertEqual(_yaml_scalar("true"), "'true'")
+
+    def test_boolean_false_quoted(self):
+        self.assertEqual(_yaml_scalar("false"), "'false'")
+
+    def test_null_keyword_quoted(self):
+        self.assertEqual(_yaml_scalar("null"), "'null'")
+
+    def test_single_quote_doubled_when_quoting_required(self):
+        # When quoting is triggered (here by leading #), embedded ' are doubled.
+        self.assertEqual(_yaml_scalar("#it's"), "'#it''s'")
+
+    def test_yaml11_special_floats_quoted(self):
+        # YAML 1.1 parsers interpret these as float infinity / NaN
+        for val in (".inf", "+.inf", "-.inf", ".nan", "+.nan", "-.nan"):
+            with self.subTest(val=val):
+                result = _yaml_scalar(val)
+                self.assertTrue(result.startswith("'"), f"{val!r} should be quoted")
+
+    def test_hex_integer_literal_quoted(self):
+        # YAML 1.1 parsers parse 0xff as integer 255
+        self.assertEqual(_yaml_scalar("0xff"), "'0xff'")
+        self.assertEqual(_yaml_scalar("0xFF"), "'0xFF'")
+
+    def test_octal_integer_literal_quoted(self):
+        # Python-style 0o prefix; conservative to quote these
+        self.assertEqual(_yaml_scalar("0o77"), "'0o77'")
+
+    def test_bare_zero_octal_quoted(self):
+        # YAML 1.1 parsers (e.g. PyYAML) interpret 077 as octal 63.
+        # Python 3 rejects int('077', 0), so a dedicated regex is required.
+        self.assertEqual(_yaml_scalar("077"), "'077'")
+        self.assertEqual(_yaml_scalar("010"), "'010'")
+        self.assertEqual(_yaml_scalar("00"), "'00'")
+
+    def test_bare_zero_octal_with_underscores_quoted(self):
+        # PyYAML's YAML 1.1 resolver uses 0[0-7_]+ so underscored forms also
+        # need quoting. Python rejects int('0__7', 0), and float('0_') raises
+        # too, so both slip past the numeric guards without the regex.
+        self.assertEqual(_yaml_scalar("0_77"), "'0_77'")
+        self.assertEqual(_yaml_scalar("0__7"), "'0__7'")
+        self.assertEqual(_yaml_scalar("0_"), "'0_'")
+
+
+class FormatYamlTests(unittest.TestCase):
+    def test_happy_path(self):
+        rows = [["Name", "Age", "City"], ["Alice", "30", "NYC"], ["Bob", "25", "LA"]]
+        out = format_yaml(rows, [None, None, None])
+        expected = (
+            "- Name: Alice\n"
+            "  Age: '30'\n"
+            "  City: NYC\n"
+            "- Name: Bob\n"
+            "  Age: '25'\n"
+            "  City: LA\n"
+        )
+        self.assertEqual(out, expected)
+
+    def test_header_only_emits_empty_list(self):
+        out = format_yaml([["Name", "Age"]], [None, None])
+        self.assertEqual(out, "[]\n")
+
+    def test_no_separator_row_raises_value_error(self):
+        rows = [["A", "B"], ["x", "y"]]
+        with self.assertRaises(ValueError) as cm:
+            format_yaml(rows, [])
+        self.assertIn("requires a header row", str(cm.exception))
+
+    def test_empty_rows_with_alignments_raises_value_error_not_index_error(self):
+        # parse_table returns rows=[], alignments=[...] for separator-only input.
+        # Library callers must get a ValueError, not an IndexError.
+        with self.assertRaises(ValueError):
+            format_yaml([], [None, None])
+
+    def test_duplicate_header_raises_value_error(self):
+        rows = [["Name", "Name"], ["a", "b"]]
+        with self.assertRaises(ValueError) as cm:
+            format_yaml(rows, [None, None])
+        self.assertIn("duplicate header", str(cm.exception))
+        self.assertIn("'Name'", str(cm.exception))
+
+    def test_special_characters_are_quoted(self):
+        rows = [
+            ["Key"],
+            ["value: with colon"],
+            ["#starts-with-hash"],
+            ["- starts with dash"],
+        ]
+        out = format_yaml(rows, [None])
+        self.assertIn("'value: with colon'", out)
+        self.assertIn("'#starts-with-hash'", out)
+        self.assertIn("'- starts with dash'", out)
+
+    def test_trailing_newline(self):
+        rows = [["A"], ["x"]]
+        out = format_yaml(rows, [None])
+        self.assertTrue(out.endswith("\n"))
+        self.assertFalse(out.endswith("\n\n"))
+
+    def test_ragged_row_pads_missing_cells_as_empty(self):
+        # A data row shorter than the header should fill missing cells with ''.
+        rows = [["A", "B", "C"], ["x"]]
+        out = format_yaml(rows, [None, None, None])
+        self.assertIn("B: ''", out)
+        self.assertIn("C: ''", out)
+
+
 class StripEmptyRowsCliTests(unittest.TestCase):
     """End-to-end CLI tests that exercise argparse wiring and behavior."""
 
@@ -275,6 +481,124 @@ class StripEmptyRowsCliTests(unittest.TestCase):
         lines = result.stdout.splitlines()
         # All data rows stripped; output contains header + separator only.
         self.assertEqual(len(lines), 2)
+
+
+class JsonCliTests(unittest.TestCase):
+    """End-to-end CLI tests for --json mode."""
+
+    def _run(self, stdin_text, *args):
+        return subprocess.run(
+            [sys.executable, SCRIPT_PATH, *args],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_json_flag_emits_json(self):
+        text = (
+            "| Name | Age |\n"
+            "| --- | --- |\n"
+            "| Alice | 30 |\n"
+        )
+        result = self._run(text, "--json")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(json.loads(result.stdout), [{"Name": "Alice", "Age": "30"}])
+
+    def test_json_header_only_emits_empty_array(self):
+        text = (
+            "| Name | Age |\n"
+            "| --- | --- |\n"
+        )
+        result = self._run(text, "--json")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(result.stdout, "[]\n")
+
+    def test_json_no_table_exits_1(self):
+        result = self._run("not a table", "--json")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no valid markdown table found", result.stderr)
+
+    def test_json_no_separator_row_exits_1(self):
+        text = "| A | B |\n| x | y |\n"
+        result = self._run(text, "--json")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("requires a header row", result.stderr)
+
+    def test_help_documents_json_flag(self):
+        result = self._run("", "--help")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("--json", result.stdout)
+
+
+class YamlCliTests(unittest.TestCase):
+    """End-to-end CLI tests for --yaml mode."""
+
+    def _run(self, stdin_text, *args):
+        return subprocess.run(
+            [sys.executable, SCRIPT_PATH, *args],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_yaml_flag_emits_yaml(self):
+        text = (
+            "| Name | Age |\n"
+            "| --- | --- |\n"
+            "| Alice | 30 |\n"
+        )
+        result = self._run(text, "--yaml")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(result.stdout, "- Name: Alice\n  Age: '30'\n")
+
+    def test_yaml_empty_input_exits_1(self):
+        result = self._run("not a table", "--yaml")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no valid markdown table found", result.stderr)
+
+    def test_yaml_header_only_emits_empty_list(self):
+        text = (
+            "| Name | Age |\n"
+            "| --- | --- |\n"
+        )
+        result = self._run(text, "--yaml")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(result.stdout, "[]\n")
+
+    def test_yaml_special_characters_quoted(self):
+        text = (
+            "| Key | Value |\n"
+            "| --- | --- |\n"
+            "| port | host: value |\n"
+            "| note | #comment |\n"
+            "| item | - first |\n"
+        )
+        result = self._run(text, "--yaml")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("'host: value'", result.stdout)
+        self.assertIn("'#comment'", result.stdout)
+        self.assertIn("'- first'", result.stdout)
+
+    def test_json_and_yaml_mutually_exclusive(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "| x | y |\n"
+        )
+        result = self._run(text, "--json", "--yaml")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("mutually exclusive", result.stderr)
+
+    def test_help_documents_yaml_flag(self):
+        result = self._run("", "--help")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("--yaml", result.stdout)
+
+    def test_yaml_no_separator_row_exits_1(self):
+        text = "| A | B |\n| x | y |\n"
+        result = self._run(text, "--yaml")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("requires a header row", result.stderr)
 
 
 if __name__ == "__main__":
