@@ -347,6 +347,14 @@ class YamlScalarTests(unittest.TestCase):
         self.assertEqual(_yaml_scalar("010"), "'010'")
         self.assertEqual(_yaml_scalar("00"), "'00'")
 
+    def test_bare_zero_octal_with_underscores_quoted(self):
+        # PyYAML's YAML 1.1 resolver uses 0[0-7_]+ so underscored forms also
+        # need quoting. Python rejects int('0__7', 0), and float('0_') raises
+        # too, so both slip past the numeric guards without the regex.
+        self.assertEqual(_yaml_scalar("0_77"), "'0_77'")
+        self.assertEqual(_yaml_scalar("0__7"), "'0__7'")
+        self.assertEqual(_yaml_scalar("0_"), "'0_'")
+
 
 class FormatYamlTests(unittest.TestCase):
     def test_happy_path(self):
