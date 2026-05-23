@@ -10,6 +10,9 @@ import sys
 _YAML_NEEDS_QUOTE_START = frozenset(':!@%&*?|>\'"#-{[`')
 _YAML_BOOL_NULL = frozenset([
     'true', 'false', 'null', '~', 'yes', 'no', 'on', 'off',
+    # YAML 1.1 single-letter booleans: PyYAML treats y/n/Y/N as True/False.
+    # value.lower() normalises case before the membership check.
+    'y', 'n',
     # YAML 1.1 special float forms that Python's float() does not parse
     '.inf', '+.inf', '-.inf', '.nan', '+.nan', '-.nan',
 ])
@@ -200,7 +203,10 @@ def format_json(rows, alignments):
             )
         seen.add(name)
 
-    payload = [dict(zip(header, row)) for row in rows[1:]]
+    payload = [
+        dict(zip(header, row + [""] * (len(header) - len(row))))
+        for row in rows[1:]
+    ]
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 

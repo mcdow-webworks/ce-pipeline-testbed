@@ -285,6 +285,12 @@ class FormatJsonTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             format_json([], [None, None])
 
+    def test_short_row_pads_missing_cells_as_empty_string(self):
+        # A data row shorter than the header must produce a full-keyed object.
+        rows = [["A", "B", "C"], ["x"]]
+        out = format_json(rows, [None, None, None])
+        self.assertEqual(json.loads(out), [{"A": "x", "B": "", "C": ""}])
+
 
 class YamlScalarTests(unittest.TestCase):
     def test_plain_value_unquoted(self):
@@ -346,6 +352,13 @@ class YamlScalarTests(unittest.TestCase):
         self.assertEqual(_yaml_scalar("077"), "'077'")
         self.assertEqual(_yaml_scalar("010"), "'010'")
         self.assertEqual(_yaml_scalar("00"), "'00'")
+
+    def test_yaml11_single_letter_booleans_quoted(self):
+        # PyYAML's YAML 1.1 resolver treats bare y/n (and Y/N) as True/False.
+        for val in ("y", "n", "Y", "N"):
+            with self.subTest(val=val):
+                result = _yaml_scalar(val)
+                self.assertTrue(result.startswith("'"), f"{val!r} should be quoted")
 
     def test_bare_zero_octal_with_underscores_quoted(self):
         # PyYAML's YAML 1.1 resolver uses 0[0-7_]+ so underscored forms also
