@@ -13,13 +13,25 @@ _YAML_BOOL_NULL = frozenset([
     # YAML 1.1 single-letter booleans: PyYAML treats y/n/Y/N as True/False.
     # value.lower() normalises case before the membership check.
     'y', 'n',
-    # YAML 1.1 special float forms that Python's float() does not parse
-    '.inf', '+.inf', '-.inf', '.nan', '+.nan', '-.nan',
+    # YAML 1.1 special float forms that Python's float() does not parse.
+    # '-.inf' and '-.nan' are omitted: '-' is in _YAML_NEEDS_QUOTE_START
+    # so leading-dash values are already quoted by the first guard.
+    '.inf', '+.inf', '.nan', '+.nan',
 ])
 # YAML 1.1 bare-zero octals (e.g. 077 → 63, 0_77 → 63). Python 3 rejects
 # int('077', 0) and int('0__7', 0), so the numeric guard below misses them;
 # a dedicated regex is required. Pattern mirrors PyYAML's resolver: 0[0-7_]+.
 _YAML_BARE_OCTAL = re.compile(r'^0[0-7_]+$')
+# YAML 1.1 sexagesimal integers (e.g. 1:30 → 90, 10:00 → 600). The
+# colon-space guard ("key: value") does not catch bare-colon time values
+# since their colon is not followed by a space.
+_YAML_SEXAGESIMAL = re.compile(r'^[-+]?[1-9][0-9_]*(:[0-5]?[0-9])+$')
+# YAML 1.1 / ISO 8601 timestamps: PyYAML parses YYYY-M-D as datetime.date
+# and fuller forms as datetime.datetime. Anchor on the date prefix; the
+# optional suffix covers T/space-separated time components.
+_YAML_TIMESTAMP = re.compile(
+    r'^\d{4}-\d{1,2}-\d{1,2}([Tt \t][\d:.\-+Zz]*)?$'
+)
 
 
 def _parse_alignment(cell):
@@ -233,6 +245,14 @@ def _yaml_scalar(value):
         # YAML 1.1 bare-zero octals (077, 010…). Python 3 rejects int('077',0)
         # so they would escape the numeric guard below without this explicit check.
         if _YAML_BARE_OCTAL.match(value):
+            needs_quote = True
+        # YAML 1.1 sexagesimal integers (1:30 → 90). The colon-space guard
+        # above only catches mapping-indicator colons ("key: value"), not
+        # bare-colon time/duration literals.
+        elif _YAML_SEXAGESIMAL.match(value):
+            needs_quote = True
+        # YAML 1.1 timestamps: PyYAML parses YYYY-M-D as datetime.date.
+        elif _YAML_TIMESTAMP.match(value):
             needs_quote = True
         else:
             try:

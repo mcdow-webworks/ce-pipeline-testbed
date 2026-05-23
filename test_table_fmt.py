@@ -368,6 +368,22 @@ class YamlScalarTests(unittest.TestCase):
         self.assertEqual(_yaml_scalar("0__7"), "'0__7'")
         self.assertEqual(_yaml_scalar("0_"), "'0_'")
 
+    def test_sexagesimal_integer_quoted(self):
+        # YAML 1.1 parsers (e.g. PyYAML) interpret 1:30 as integer 90,
+        # 10:00 as 600, 1:30:00 as 5400. The colon-space guard does not
+        # fire because there is no space after the colon.
+        self.assertEqual(_yaml_scalar("1:30"), "'1:30'")
+        self.assertEqual(_yaml_scalar("10:00"), "'10:00'")
+        self.assertEqual(_yaml_scalar("1:30:00"), "'1:30:00'")
+
+    def test_iso8601_date_quoted(self):
+        # PyYAML's YAML 1.1 resolver parses ISO 8601 dates as datetime.date
+        # and datetimes as datetime.datetime — both must be quoted.
+        self.assertEqual(_yaml_scalar("2024-01-01"), "'2024-01-01'")
+        self.assertEqual(_yaml_scalar("2024-1-1"), "'2024-1-1'")
+        self.assertEqual(_yaml_scalar("2024-01-01T12:00:00"), "'2024-01-01T12:00:00'")
+        self.assertEqual(_yaml_scalar("2024-01-01 12:00:00"), "'2024-01-01 12:00:00'")
+
 
 class FormatYamlTests(unittest.TestCase):
     def test_happy_path(self):
