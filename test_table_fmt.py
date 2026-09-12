@@ -277,5 +277,118 @@ class StripEmptyRowsCliTests(unittest.TestCase):
         self.assertEqual(len(lines), 2)
 
 
+class MinWidthTests(unittest.TestCase):
+    """``format_table``'s ``min_width`` parameter as the column-width floor."""
+
+    def test_default_matches_explicit_three(self):
+        rows = [["Name", "Age", "City"], ["Alice", "30", "NYC"]]
+        alignments = ["left", "right", "center"]
+        self.assertEqual(
+            format_table(rows, alignments),
+            format_table(rows, alignments, min_width=3),
+        )
+
+    def test_narrow_columns_are_widened_to_min_width(self):
+        rows = [["A", "B"], ["x", "y"]]
+        out = format_table(rows, min_width=8)
+        expected = (
+            "| A        | B        |\n"
+            "| -------- | -------- |\n"
+            "| x        | y        |\n"
+        )
+        self.assertEqual(out, expected)
+
+    def test_columns_wider_than_min_width_are_unchanged(self):
+        rows = [["Identifier"], ["x"]]
+        # "Identifier" is 10 chars, wider than the 8 floor, so the column
+        # keeps its natural width.
+        self.assertEqual(
+            format_table(rows, min_width=8),
+            format_table(rows),
+        )
+
+    def test_centered_separator_well_formed_at_wider_min_width(self):
+        rows = [["A"], ["x"]]
+        sep = format_table(rows, ["center"], min_width=8).splitlines()[1]
+        self.assertEqual(sep, "| :------: |")
+
+    def test_min_width_applies_per_column_independently(self):
+        rows = [["A", "Identifier"], ["x", "y"]]
+        lines = format_table(rows, min_width=8).splitlines()
+        # Narrow column padded to 8; wide column keeps its natural 10.
+        self.assertEqual(lines[0], "| A        | Identifier |")
+
+
+class MinWidthCliTests(unittest.TestCase):
+    """End-to-end CLI tests for --min-width argparse wiring and validation."""
+
+    def _run(self, stdin_text, *args):
+        return subprocess.run(
+            [sys.executable, SCRIPT_PATH, *args],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+        )
+
+    TABLE = (
+        "| A | B |\n"
+        "| :--- | ---: |\n"
+        "| x | y |\n"
+    )
+
+    def test_min_width_flag_widens_columns(self):
+        result = self._run(self.TABLE, "--min-width", "8")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        # Compute exact expected output via the library.
+        rows, alignments = parse_table(self.TABLE)
+        expected = format_table(rows, alignments, min_width=8)
+        self.assertEqual(result.stdout, expected)
+
+    def test_no_flag_preserves_byte_for_byte_behavior(self):
+        result = self._run(self.TABLE)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        rows, alignments = parse_table(self.TABLE)
+        expected = format_table(rows, alignments)
+        self.assertEqual(result.stdout, expected)
+
+    def test_value_below_floor_is_rejected(self):
+        result = self._run(self.TABLE, "--min-width", "2")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("--min-width", result.stderr)
+        self.assertIn("at least 3", result.stderr)
+
+    def test_non_integer_value_is_rejected(self):
+        result = self._run(self.TABLE, "--min-width", "abc")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("--min-width", result.stderr)
+
+    def test_floor_value_three_is_accepted(self):
+        result = self._run(self.TABLE, "--min-width", "3")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        rows, alignments = parse_table(self.TABLE)
+        self.assertEqual(result.stdout, format_table(rows, alignments))
+
+    def test_help_documents_min_width_flag(self):
+        result = self._run("", "--help")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("--min-width", result.stdout)
+
+    def test_min_width_composes_with_strip_empty_rows(self):
+        text = (
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "| x | y |\n"
+            "|   |   |\n"
+        )
+        result = self._run(text, "--strip-empty-rows", "--min-width", "8")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        rows, alignments = parse_table(text)
+        rows = _strip_empty_rows(rows)
+        expected = format_table(rows, alignments, min_width=8)
+        self.assertEqual(result.stdout, expected)
+
+
 if __name__ == "__main__":
     unittest.main()

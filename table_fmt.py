@@ -90,12 +90,13 @@ def _strip_empty_rows(rows):
     return [header] + [row for row in data if not _is_empty_row(row)]
 
 
-def format_table(rows, alignments=None):
+def format_table(rows, alignments=None, min_width=3):
     """Return a formatted markdown table string with columns padded to equal width.
 
     The first row is treated as the header. A separator row is inserted after the
     header; its cells carry colon markers that reflect ``alignments`` when
-    provided. Columns are padded to the width of the longest cell (minimum 3).
+    provided. Columns are padded to the width of the longest cell, with
+    ``min_width`` as the floor.
 
     ``alignments`` is an optional list of ``'left'``, ``'right'``, ``'center'``,
     or ``None`` per column. ``None`` (and any missing entries) defaults to
@@ -103,6 +104,12 @@ def format_table(rows, alignments=None):
     ``alignments`` list shorter than the number of columns is allowed; missing
     trailing entries fall back to the ``None`` default. Extra entries beyond
     the column count are ignored.
+
+    ``min_width`` is the minimum padded column width and defaults to 3, which
+    is the smallest width that keeps a centered separator cell (``:-:``)
+    well-formed. Values below 3 are rejected at the CLI boundary rather than
+    here; a library caller passing less than 3 gets narrower columns and may
+    produce a malformed separator cell.
     """
     if not rows:
         return ""
@@ -114,11 +121,13 @@ def format_table(rows, alignments=None):
     num_cols = max(len(row) for row in rows)
     normalised = [row + [""] * (num_cols - len(row)) for row in rows]
 
-    # Compute column widths (minimum 3 for separator aesthetics)
+    # Compute column widths (min_width floor for separator aesthetics)
     col_widths = []
     for col in range(num_cols):
-        width = max((len(normalised[r][col]) for r in range(len(normalised))), default=3)
-        col_widths.append(max(width, 3))
+        width = max(
+            (len(normalised[r][col]) for r in range(len(normalised))), default=min_width
+        )
+        col_widths.append(max(width, min_width))
 
     def align_for(i):
         return alignments[i] if i < len(alignments) else None
@@ -152,6 +161,25 @@ def format_table(rows, alignments=None):
     return "\n".join(lines) + "\n"
 
 
+def _min_width(value):
+    """Parse a ``--min-width`` argument, rejecting anything below 3.
+
+    3 is the smallest width that keeps a centered separator cell (``:-:``)
+    well-formed. Raises ``argparse.ArgumentTypeError`` so argparse reports the
+    failure on stderr and exits 2, matching its handling of any other bad value.
+    """
+    try:
+        width = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid int value: {value!r}")
+    if width < 3:
+        raise argparse.ArgumentTypeError(
+            f"must be at least 3 (got {width}); 3 is the narrowest column that "
+            "keeps a centered separator cell well-formed"
+        )
+    return width
+
+
 def main():
     """Read a markdown table from stdin, format it, and print to stdout."""
     parser = argparse.ArgumentParser(
@@ -165,6 +193,14 @@ def main():
         "before rendering. The header row is preserved even when every "
         "cell is empty.",
     )
+    parser.add_argument(
+        "--min-width",
+        type=_min_width,
+        default=3,
+        help="Minimum padded width for every column (default: 3). Columns "
+        "whose longest cell is already wider are left alone. Must be at "
+        "least 3.",
+    )
     args = parser.parse_args()
 
     text = sys.stdin.read()
@@ -174,7 +210,7 @@ def main():
         sys.exit(1)
     if args.strip_empty_rows:
         rows = _strip_empty_rows(rows)
-    sys.stdout.write(format_table(rows, alignments))
+    sys.stdout.write(format_table(rows, alignments, min_width=args.min_width))
 
 
 if __name__ == "__main__":
